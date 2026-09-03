@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 
 import { useParams, useNavigate, Link } from "react-router-dom";
 
-import { base44 } from "@/api/base44Client";
+import { supabase } from '../api/supabaseClient'
 
 import { formatCurrency, formatDate, daysBetween, calcRecebivelStatus, statusLabels, statusColors, riscoColors } from "@/lib/format";
 
