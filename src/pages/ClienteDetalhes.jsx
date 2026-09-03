@@ -11,8 +11,7 @@ import {
   MapPin, 
   FileText, 
   Clock, 
-  CheckCircle, 
-  AlertCircle 
+  CheckCircle 
 } from "lucide-react";
 
 export default function ClienteDetalhes() {
@@ -25,7 +24,6 @@ export default function ClienteDetalhes() {
     async function fetchData() {
       try {
         setLoading(true);
-        // Busca cliente
         const { data: clienteData, error: clienteErr } = await supabase
           .from("clientes")
           .select("*")
@@ -35,7 +33,6 @@ export default function ClienteDetalhes() {
         if (clienteErr) throw clienteErr;
         setCliente(clienteData);
 
-        // Busca recebíveis do cliente
         const { data: recebiveisData, error: recebiveisErr } = await supabase
           .from("recebiveis")
           .select("*")
@@ -89,7 +86,6 @@ export default function ClienteDetalhes() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        {/* Informações do Cliente */}
         <div className="rounded-xl border border-border bg-card p-6 space-y-4">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Building className="h-5 w-5 text-primary" /> Dados de Contato
@@ -107,13 +103,11 @@ export default function ClienteDetalhes() {
           </div>
         </div>
 
-        {/* Tabela de Aging */}
         <div className="md:col-span-2">
           <AgingTabela recebiveisEnriched={recebiveis} clienteId={id} />
         </div>
       </div>
 
-      {/* Lista de Recebíveis do Cliente */}
       <div className="rounded-xl border border-border bg-card p-6">
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" /> Títulos de Cobrança
