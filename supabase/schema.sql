@@ -136,21 +136,31 @@ ALTER TABLE public.promessas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reguas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.prioridades_cobranca ENABLE ROW LEVEL SECURITY;
 
--- Políticas de acesso permitindo que cada usuário acerte somente dados da sua empresa
+-- Políticas de acesso permitindo que cada usuário acesse somente dados da sua empresa
+DROP POLICY IF EXISTS "Empresas isoladas por usuario" ON public.empresas;
 CREATE POLICY "Empresas isoladas por usuario" ON public.empresas
     FOR ALL USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Clientes visiveis por empresa" ON public.clientes;
 CREATE POLICY "Clientes visiveis por empresa" ON public.clientes
     FOR ALL USING (empresa_id IN (SELECT id FROM public.empresas WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS "Recebiveis visiveis por empresa" ON public.recebiveis;
 CREATE POLICY "Recebiveis visiveis por empresa" ON public.recebiveis
     FOR ALL USING (empresa_id IN (SELECT id FROM public.empresas WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS "Cobrancas visiveis por empresa" ON public.cobrancas;
 CREATE POLICY "Cobrancas visiveis por empresa" ON public.cobrancas
     FOR ALL USING (empresa_id IN (SELECT id FROM public.empresas WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS "Promessas visiveis por empresa" ON public.promessas;
 CREATE POLICY "Promessas visiveis por empresa" ON public.promessas
     FOR ALL USING (empresa_id IN (SELECT id FROM public.empresas WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS "Reguas visiveis por empresa" ON public.reguas;
 CREATE POLICY "Reguas visiveis por empresa" ON public.reguas
+    FOR ALL USING (empresa_id IN (SELECT id FROM public.empresas WHERE user_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Prioridades visiveis por empresa" ON public.prioridades_cobranca;
+CREATE POLICY "Prioridades visiveis por empresa" ON public.prioridades_cobranca
     FOR ALL USING (empresa_id IN (SELECT id FROM public.empresas WHERE user_id = auth.uid()));
