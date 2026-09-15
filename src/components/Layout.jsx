@@ -5,7 +5,7 @@ import {
   Users,
   Receipt,
   MessageSquareText,
-  Handshake,
+  HeartHandshake,
   Settings,
   Menu,
   X,
@@ -47,7 +47,7 @@ export default function Layout({ children }) {
     { label: "Clientes", path: "/clientes", icon: Users },
     { label: "Recebíveis", path: "/recebiveis", icon: Receipt },
     { label: "Régua & Cobranças", path: "/cobrancas", icon: MessageSquareText },
-    { label: "Promessas & Acordos", path: "/promessas", icon: Handshake },
+    { label: "Promessas & Acordos", path: "/promessas", icon: HeartHandshake },
     { label: "Configurações & Planos", path: "/configuracoes", icon: Settings },
   ];
 

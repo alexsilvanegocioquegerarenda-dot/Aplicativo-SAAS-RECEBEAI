@@ -293,15 +293,51 @@ function setLocalData(entityName, data) {
   }
 }
 
+// Mapeamento de entidades para tabelas do Supabase (PostgreSQL)
+const TABLE_MAP = {
+  Cliente: "clientes",
+  Recebivel: "recebiveis",
+  Cobranca: "cobrancas",
+  Promessa: "promessas",
+  PrioridadeCobranca: "prioridades_cobranca",
+  Regua: "reguas",
+};
+
 // Cria a API compatível com base44.entities.[EntityName]
 function createEntityClient(entityName) {
+  const tableName = TABLE_MAP[entityName];
+
   return {
     async list() {
-      // Se houver Supabase configurado, podemos sincronizar
+      if (isSupabaseConfigured && tableName) {
+        try {
+          const { data, error } = await supabase.from(tableName).select("*");
+          if (!error && data && data.length > 0) {
+            return data;
+          }
+        } catch (e) {
+          console.warn(`[Supabase] Erro ao listar ${entityName}:`, e);
+        }
+      }
       return getLocalData(entityName);
     },
 
     async filter(criteria = {}) {
+      if (isSupabaseConfigured && tableName) {
+        try {
+          let query = supabase.from(tableName).select("*");
+          Object.entries(criteria).forEach(([key, value]) => {
+            query = query.eq(key, value);
+          });
+          const { data, error } = await query;
+          if (!error && data) {
+            return data;
+          }
+        } catch (e) {
+          console.warn(`[Supabase] Erro ao filtrar ${entityName}:`, e);
+        }
+      }
+
       const items = getLocalData(entityName);
       return items.filter(item => {
         return Object.entries(criteria).every(([key, value]) => {
@@ -311,11 +347,50 @@ function createEntityClient(entityName) {
     },
 
     async get(id) {
+      if (isSupabaseConfigured && tableName) {
+        try {
+          const { data, error } = await supabase
+            .from(tableName)
+            .select("*")
+            .eq("id", id)
+            .maybeSingle();
+          if (!error && data) {
+            return data;
+          }
+        } catch (e) {
+          console.warn(`[Supabase] Erro ao buscar ${entityName}:`, e);
+        }
+      }
+
       const items = getLocalData(entityName);
       return items.find(x => x.id === id) || null;
     },
 
     async create(data) {
+      if (isSupabaseConfigured && tableName) {
+        try {
+          const payload = { ...data };
+          // Deixa o PostgreSQL gerar o UUID primário se não for um UUID válido
+          if (payload.id && (payload.id.startsWith("cli-") || payload.id.startsWith("rec-") || payload.id.startsWith("reg-"))) {
+            delete payload.id;
+          }
+          const { data: inserted, error } = await supabase
+            .from(tableName)
+            .insert([payload])
+            .select()
+            .single();
+
+          if (!error && inserted) {
+            const items = getLocalData(entityName);
+            items.push(inserted);
+            setLocalData(entityName, items);
+            return inserted;
+          }
+        } catch (e) {
+          console.warn(`[Supabase] Erro ao criar ${entityName}:`, e);
+        }
+      }
+
       const items = getLocalData(entityName);
       const newItem = {
         id: `${entityName.toLowerCase()}-${Date.now()}`,
@@ -328,6 +403,29 @@ function createEntityClient(entityName) {
     },
 
     async update(id, updates) {
+      if (isSupabaseConfigured && tableName) {
+        try {
+          const { data: updated, error } = await supabase
+            .from(tableName)
+            .update({ ...updates, atualizado_em: new Date().toISOString() })
+            .eq("id", id)
+            .select()
+            .maybeSingle();
+
+          if (!error && updated) {
+            const items = getLocalData(entityName);
+            const index = items.findIndex(x => x.id === id);
+            if (index !== -1) {
+              items[index] = updated;
+              setLocalData(entityName, items);
+            }
+            return updated;
+          }
+        } catch (e) {
+          console.warn(`[Supabase] Erro ao atualizar ${entityName}:`, e);
+        }
+      }
+
       const items = getLocalData(entityName);
       const index = items.findIndex(x => x.id === id);
       if (index === -1) {
@@ -339,6 +437,14 @@ function createEntityClient(entityName) {
     },
 
     async delete(id) {
+      if (isSupabaseConfigured && tableName) {
+        try {
+          await supabase.from(tableName).delete().eq("id", id);
+        } catch (e) {
+          console.warn(`[Supabase] Erro ao deletar ${entityName}:`, e);
+        }
+      }
+
       const items = getLocalData(entityName);
       const filtered = items.filter(x => x.id !== id);
       setLocalData(entityName, filtered);
@@ -357,9 +463,30 @@ export const base44 = {
     Regua: createEntityClient("Regua"),
     Configuracao: {
       async get() {
+        if (isSupabaseConfigured) {
+          try {
+            const { data, error } = await supabase
+              .from("empresas")
+              .select("*")
+              .limit(1)
+              .maybeSingle();
+            if (!error && data) {
+              return { ...getLocalData("Configuracao"), ...data };
+            }
+          } catch (e) {
+            console.warn("[Supabase] Erro ao carregar configurações da empresa:", e);
+          }
+        }
         return getLocalData("Configuracao");
       },
       async update(updates) {
+        if (isSupabaseConfigured) {
+          try {
+            await supabase.from("empresas").upsert(updates);
+          } catch (e) {
+            console.warn("[Supabase] Erro ao salvar configurações no Supabase:", e);
+          }
+        }
         const current = getLocalData("Configuracao");
         const updated = { ...current, ...updates };
         setLocalData("Configuracao", updated);

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { formatCurrency, formatDate, statusColors, statusLabels } from "@/lib/format";
 import {
-  Handshake,
+  HeartHandshake,
   Plus,
   CheckCircle2,
   XCircle,
@@ -146,7 +146,7 @@ export default function Promessas() {
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {promessas.length === 0 ? (
           <div className="py-12 text-center">
-            <Handshake className="mx-auto h-10 w-10 text-slate-300" />
+            <HeartHandshake className="mx-auto h-10 w-10 text-slate-300" />
             <p className="mt-3 text-sm font-medium text-slate-700">Nenhuma promessa de pagamento registrada</p>
             <p className="text-xs text-slate-400">Registre acordos ao negociar com devedores pelo telefone ou WhatsApp.</p>
           </div>
