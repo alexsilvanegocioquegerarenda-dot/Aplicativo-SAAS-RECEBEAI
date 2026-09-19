@@ -49,10 +49,16 @@ export default function Planos() {
         window.location.href = res.data.url;
       } else {
         // Modo demo ou fallback
+        const nomePlano =
+          planoKey === "enterprise"
+            ? "Enterprise"
+            : planoKey === "profissional"
+            ? "Profissional"
+            : "Essencial";
         setTimeout(() => {
           setStatusMessage({
             type: "success",
-            title: `Plano ${planoKey === "profissional" ? "Profissional" : "Essencial"} simulado!`,
+            title: `Plano ${nomePlano} selecionado!`,
             desc: "Ambiente de demonstração: simulação de checkout concluída com sucesso."
           });
           setLoadingPlano(null);
@@ -69,18 +75,18 @@ export default function Planos() {
     {
       id: "essencial",
       nome: "Essencial",
-      descricao: "Ideal para pequenas empresas e autônomos organizarem suas cobranças.",
+      descricao: "Ideal para pequenas empresas e autônomos organizarem e automatizarem suas cobranças.",
       precoMensal: 149,
       precoAnual: 119, // ~20% off
       destaque: false,
       recursos: [
         "Até 300 clientes cadastrados",
         "Até R$ 100k em recebíveis gerenciados",
-        "Pipeline Kanban de cobrança",
-        "Régua de cobrança padrão (5 etapas)",
+        "Pipeline Kanban de cobrança completo",
+        "Régua de cobrança preventiva e reativa (5 etapas)",
         "Templates personalizáveis de WhatsApp e E-mail",
         "Cálculo de Aging List e DSO em tempo real",
-        "Importação de títulos via planilha CSV",
+        "Importação de títulos e faturas via CSV",
         "Suporte por e-mail em até 24h úteis"
       ],
       cta: "Começar com Essencial",
@@ -90,22 +96,44 @@ export default function Planos() {
       id: "profissional",
       nome: "Profissional",
       badge: "Mais Popular",
-      descricao: "Solução completa com automação de IA, régua avançada e sem limites operacionais.",
+      descricao: "Solução completa com automação de IA, régua avançada e sem limites de carteira.",
       precoMensal: 349,
-      precoAnual: 279,
+      precoAnual: 279, // ~20% off
       destaque: true,
       recursos: [
         "Clientes e recebíveis ilimitados",
         "IA Financeira para diagnóstico e insights de inadimplência",
-        "Priorização preditiva de devedores por score",
         "Disparo automatizado de régua via WhatsApp API",
+        "Priorização preditiva de devedores por score de risco",
         "Relatórios consolidados de taxa de recuperação vs meta",
         "Gestão de acordos e promessas com alertas de quebra",
-        "Histórico e auditoria de importações em lote",
-        "Suporte prioritário via WhatsApp direto com time sênior"
+        "Histórico e auditoria completa de importações em lote",
+        "Suporte prioritário via WhatsApp com time especialista"
       ],
       cta: "Assinar Profissional",
       corBadge: "bg-emerald-500 text-white"
+    },
+    {
+      id: "enterprise",
+      nome: "Enterprise",
+      badge: "Corporativo",
+      descricao: "Para médias e grandes operações que exigem escala, múltiplos acessos e integrações diretas.",
+      precoMensal: 799,
+      precoAnual: 639, // ~20% off
+      destaque: false,
+      isEnterprise: true,
+      recursos: [
+        "Tudo do plano Profissional incluso",
+        "Múltiplos usuários com controle de permissões por equipe",
+        "API aberta de integração direta com ERPs e Bancos",
+        "Regras de régua multicanal 100% customizadas com Webhooks",
+        "IA Financeira avançada para negociações e acordos complexos",
+        "Painel Master multi-empresas e relatórios customizados",
+        "Onboarding e treinamento exclusivo para sua equipe",
+        "Gerente de contas dedicado com SLA de suporte em até 1h"
+      ],
+      cta: "Contratar Enterprise",
+      corBadge: "bg-purple-600 text-white"
     }
   ];
 
@@ -195,7 +223,7 @@ export default function Planos() {
       )}
 
       {/* Cards dos Planos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto items-stretch">
         {planos.map((plano) => {
           const preco = billingPeriod === "anual" ? plano.precoAnual : plano.precoMensal;
           const isLoading = loadingPlano === plano.id;
@@ -206,12 +234,20 @@ export default function Planos() {
               className={`relative rounded-2xl p-8 flex flex-col justify-between transition-all duration-200 ${
                 plano.destaque
                   ? "bg-gradient-to-b from-emerald-50/50 to-white dark:from-emerald-950/20 dark:to-gray-900 border-2 border-emerald-500 shadow-xl shadow-emerald-500/10"
+                  : plano.isEnterprise
+                  ? "bg-gradient-to-b from-purple-50/40 to-white dark:from-purple-950/20 dark:to-gray-900 border-2 border-purple-500/60 shadow-lg shadow-purple-500/10"
                   : "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md"
               }`}
             >
               {plano.badge && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider px-3.5 py-1 rounded-full shadow-sm">
+                  <span
+                    className={`text-xs font-bold uppercase tracking-wider px-3.5 py-1 rounded-full shadow-sm ${
+                      plano.destaque
+                        ? "bg-emerald-600 text-white"
+                        : "bg-purple-600 text-white"
+                    }`}
+                  >
                     {plano.badge}
                   </span>
                 </div>
@@ -225,8 +261,11 @@ export default function Planos() {
                   {plano.destaque && (
                     <Zap className="w-5 h-5 text-emerald-500 fill-emerald-500" />
                   )}
+                  {plano.isEnterprise && (
+                    <Sparkles className="w-5 h-5 text-purple-500" />
+                  )}
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 min-h-[40px] mb-6">
+                <p className="text-sm text-gray-600 dark:text-gray-400 min-h-[44px] mb-6">
                   {plano.descricao}
                 </p>
 
@@ -236,7 +275,7 @@ export default function Planos() {
                   <span className="text-4xl sm:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight">
                     {preco}
                   </span>
-                  <span className="text-sm text-gray-500 font-medium">/mês</span>
+                  <span className="text-sm text-gray-500 font-medium">,00/mês</span>
                   {billingPeriod === "anual" && (
                     <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold ml-2">
                       (cobrado anualmente)
@@ -256,6 +295,8 @@ export default function Planos() {
                           className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center mt-0.5 ${
                             plano.destaque
                               ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300"
+                              : plano.isEnterprise
+                              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300"
                               : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
                           }`}
                         >
@@ -275,6 +316,8 @@ export default function Planos() {
                 className={`w-full py-3.5 px-6 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 shadow-sm ${
                   plano.destaque
                     ? "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-emerald-600/20"
+                    : plano.isEnterprise
+                    ? "bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white shadow-purple-600/20"
                     : "bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
                 } disabled:opacity-60 disabled:cursor-not-allowed`}
               >

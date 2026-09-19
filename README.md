@@ -57,10 +57,10 @@ npm run build
 ## 💼 Guia de Comercialização do SaaS
 
 Para comercializar o RecebeAi no mercado brasileiro (B2B):
-1. **Planos de Assinatura Recomendados**:
-   - **Starter (R$ 119/mês)**: até 50 títulos, disparo manual WhatsApp, régua básica.
-   - **Pro (R$ 299/mês)**: até 300 títulos, régua automática, aging detalhado, suporte WhatsApp.
-   - **Enterprise (R$ 699/mês)**: títulos ilimitados, múltiplos usuários, API de boletos/PIX.
+1. **Planos de Assinatura**:
+   - **Essencial (R$ 149,00/mês)**: até 300 clientes, R$ 100k gerenciados, Kanban, régua de 5 etapas, templates WhatsApp/Email, cálculo de Aging e DSO.
+   - **Profissional (R$ 349,00/mês)**: clientes e recebíveis ilimitados, IA Financeira de diagnóstico, régua automatizada WhatsApp API, score preditivo de cobrança, gestão de acordos.
+   - **Enterprise (R$ 799,00/mês)**: multi-usuários por equipe, API aberta para ERPs e Bancos, régua multicanal customizada com Webhooks, IA para negociações complexas, onboarding e gerente de conta dedicado.
 2. **Gateway de Assinaturas**:
    - Conecte um provedor como Asaas, Mercado Pago ou Stripe para cobrar as mensalidades dos assinantes via Cartão de Crédito ou PIX Recorrente.
 3. **Deploy na Vercel**:
