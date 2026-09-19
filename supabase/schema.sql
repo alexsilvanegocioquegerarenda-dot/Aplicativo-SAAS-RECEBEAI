@@ -164,3 +164,83 @@ CREATE POLICY "Reguas visiveis por empresa" ON public.reguas
 DROP POLICY IF EXISTS "Prioridades visiveis por empresa" ON public.prioridades_cobranca;
 CREATE POLICY "Prioridades visiveis por empresa" ON public.prioridades_cobranca
     FOR ALL USING (empresa_id IN (SELECT id FROM public.empresas WHERE user_id = auth.uid()));
+
+-- ==============================================================================
+-- 9. NOVAS TABELAS: IMPORTAÇÕES, METAS, TEMPLATES E CONVERSAS IA
+-- ==============================================================================
+
+-- Tabela de Histórico e Auditoria de Importações
+CREATE TABLE IF NOT EXISTS public.importacoes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    empresa_id UUID NOT NULL REFERENCES public.empresas(id) ON DELETE CASCADE,
+    arquivo_nome VARCHAR(255) NOT NULL,
+    total_registros INTEGER DEFAULT 0,
+    total_sucesso INTEGER DEFAULT 0,
+    total_erros INTEGER DEFAULT 0,
+    status VARCHAR(30) DEFAULT 'concluido', -- 'concluido', 'parcial', 'falha'
+    detalhes JSONB DEFAULT '[]'::jsonb,
+    criado_em TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tabela de Metas Mensais de Recuperação
+CREATE TABLE IF NOT EXISTS public.metas_recuperacao (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    empresa_id UUID NOT NULL REFERENCES public.empresas(id) ON DELETE CASCADE,
+    mes_ano VARCHAR(7) NOT NULL, -- Formato 'YYYY-MM'
+    meta_valor NUMERIC(12,2) NOT NULL DEFAULT 50000.00,
+    criado_em TIMESTAMPTZ DEFAULT NOW(),
+    atualizado_em TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT unq_empresa_mes UNIQUE (empresa_id, mes_ano)
+);
+
+-- Tabela de Templates Customizáveis de Mensagens
+CREATE TABLE IF NOT EXISTS public.templates_mensagem (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    empresa_id UUID NOT NULL REFERENCES public.empresas(id) ON DELETE CASCADE,
+    titulo VARCHAR(150) NOT NULL,
+    canal VARCHAR(30) DEFAULT 'whatsapp', -- 'whatsapp', 'email', 'sms'
+    prioridade VARCHAR(20) DEFAULT 'media', -- 'alta', 'media', 'baixa'
+    texto TEXT NOT NULL,
+    ativo BOOLEAN DEFAULT TRUE,
+    criado_em TIMESTAMPTZ DEFAULT NOW(),
+    atualizado_em TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tabela de Histórico da IA Financeira
+CREATE TABLE IF NOT EXISTS public.conversas_ia (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    empresa_id UUID NOT NULL REFERENCES public.empresas(id) ON DELETE CASCADE,
+    role VARCHAR(20) NOT NULL, -- 'user', 'assistant', 'system'
+    content TEXT NOT NULL,
+    criado_em TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Índices adicionais
+CREATE INDEX IF NOT EXISTS idx_importacoes_empresa ON public.importacoes(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_metas_empresa ON public.metas_recuperacao(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_templates_empresa ON public.templates_mensagem(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_conversas_ia_empresa ON public.conversas_ia(empresa_id);
+
+-- Ativar RLS
+ALTER TABLE public.importacoes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.metas_recuperacao ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.templates_mensagem ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.conversas_ia ENABLE ROW LEVEL SECURITY;
+
+-- Políticas RLS
+DROP POLICY IF EXISTS "Importacoes visiveis por empresa" ON public.importacoes;
+CREATE POLICY "Importacoes visiveis por empresa" ON public.importacoes
+    FOR ALL USING (empresa_id IN (SELECT id FROM public.empresas WHERE user_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Metas visiveis por empresa" ON public.metas_recuperacao;
+CREATE POLICY "Metas visiveis por empresa" ON public.metas_recuperacao
+    FOR ALL USING (empresa_id IN (SELECT id FROM public.empresas WHERE user_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Templates visiveis por empresa" ON public.templates_mensagem;
+CREATE POLICY "Templates visiveis por empresa" ON public.templates_mensagem
+    FOR ALL USING (empresa_id IN (SELECT id FROM public.empresas WHERE user_id = auth.uid()));
+
+DROP POLICY IF EXISTS "Conversas IA visiveis por empresa" ON public.conversas_ia;
+CREATE POLICY "Conversas IA visiveis por empresa" ON public.conversas_ia
+    FOR ALL USING (empresa_id IN (SELECT id FROM public.empresas WHERE user_id = auth.uid()));
+

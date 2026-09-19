@@ -4,18 +4,25 @@ import {
   LayoutDashboard,
   Users,
   Receipt,
+  Kanban,
+  FileSpreadsheet,
+  Clock,
+  Activity,
   MessageSquareText,
+  Sliders,
+  FileText,
   HeartHandshake,
+  Sparkles,
+  TrendingUp,
   Settings,
+  CreditCard,
   Menu,
   X,
   ShieldCheck,
   Zap,
-  TrendingUp,
   ExternalLink,
   ChevronRight,
   Database,
-  Sparkles,
   Crown,
   LogOut,
   User
@@ -41,18 +48,30 @@ export default function Layout({ children }) {
     carregarPlano();
   }, [location.pathname]);
 
-  // Itens normais de navegação acessíveis para clientes
+  // Checklist de 15 páginas do SaaS RecebeAi
   const navItems = [
-    { label: "Visão Geral", path: "/dashboard", icon: LayoutDashboard },
+    { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
     { label: "Clientes", path: "/clientes", icon: Users },
     { label: "Recebíveis", path: "/recebiveis", icon: Receipt },
-    { label: "Régua & Cobranças", path: "/cobrancas", icon: MessageSquareText },
-    { label: "Promessas & Acordos", path: "/promessas", icon: HeartHandshake },
-    { label: "Configurações & Planos", path: "/configuracoes", icon: Settings },
+    { label: "Kanban", path: "/kanban", icon: Kanban },
+    { label: "Importações", path: "/importacoes", icon: FileSpreadsheet },
+    { label: "Aging", path: "/aging", icon: Clock },
+    { label: "DSO", path: "/dso", icon: Activity },
+    { label: "Cobranças", path: "/cobrancas", icon: MessageSquareText },
+    { label: "Régua", path: "/regua", icon: Sliders },
+    { label: "Templates", path: "/templates", icon: FileText },
+    { label: "Promessas", path: "/promessas", icon: HeartHandshake },
+    { label: "IA Financeira", path: "/ia", icon: Sparkles, badge: "IA" },
+    { label: "Recuperação", path: "/recuperacao", icon: TrendingUp },
+    { label: "Configurações", path: "/configuracoes", icon: Settings },
+    { label: "Planos", path: "/planos", icon: CreditCard },
   ];
 
   const isActive = (path) => {
     if (path === "/dashboard" && (location.pathname === "/" || location.pathname === "/dashboard")) {
+      return true;
+    }
+    if (path === "/recuperacao" && (location.pathname === "/recuperacao" || location.pathname === "/relatorios")) {
       return true;
     }
     return location.pathname.startsWith(path) && path !== "/";
@@ -124,6 +143,13 @@ export default function Layout({ children }) {
                 >
                   <Icon className={`h-4 w-4 transition-colors ${active ? "text-white" : "text-slate-400 group-hover:text-slate-600"}`} />
                   <span className="flex-1">{item.label}</span>
+                  {item.badge && (
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                      active ? "bg-white/20 text-white" : "bg-purple-100 text-purple-700"
+                    }`}>
+                      {item.badge}
+                    </span>
+                  )}
                   {active && <ChevronRight className="h-3.5 w-3.5 opacity-60" />}
                 </Link>
               );
@@ -234,7 +260,14 @@ export default function Layout({ children }) {
                     }`}
                   >
                     <Icon className="h-4 w-4" />
-                    <span>{item.label}</span>
+                    <span className="flex-1">{item.label}</span>
+                    {item.badge && (
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                        active ? "bg-white/20 text-white" : "bg-purple-100 text-purple-700"
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
                   </Link>
                 );
               })}

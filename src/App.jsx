@@ -12,6 +12,15 @@ import Cobrancas from './pages/Cobrancas';
 import Promessas from './pages/Promessas';
 import Configuracoes from './pages/Configuracoes';
 import AdminDashboard from './pages/AdminDashboard';
+import Kanban from './pages/Kanban';
+import Importacoes from './pages/Importacoes';
+import Aging from './pages/Aging';
+import DSO from './pages/DSO';
+import Regua from './pages/Regua';
+import Templates from './pages/Templates';
+import IAFinanceira from './pages/IAFinanceira';
+import Recuperacao from './pages/Recuperacao';
+import Planos from './pages/Planos';
 
 export default function App() {
   return (
@@ -33,9 +42,19 @@ export default function App() {
                     <Route path="/clientes" element={<Clientes />} />
                     <Route path="/clientes/:id" element={<ClienteDetalhes />} />
                     <Route path="/recebiveis" element={<Recebiveis />} />
+                    <Route path="/kanban" element={<Kanban />} />
+                    <Route path="/importacoes" element={<Importacoes />} />
+                    <Route path="/aging" element={<Aging />} />
+                    <Route path="/dso" element={<DSO />} />
                     <Route path="/cobrancas" element={<Cobrancas />} />
+                    <Route path="/regua" element={<Regua />} />
+                    <Route path="/templates" element={<Templates />} />
                     <Route path="/promessas" element={<Promessas />} />
+                    <Route path="/ia" element={<IAFinanceira />} />
+                    <Route path="/recuperacao" element={<Recuperacao />} />
+                    <Route path="/relatorios" element={<Recuperacao />} />
                     <Route path="/configuracoes" element={<Configuracoes />} />
+                    <Route path="/planos" element={<Planos />} />
 
                     {/* Rota estritamente restrita ao Administrador Master */}
                     <Route
