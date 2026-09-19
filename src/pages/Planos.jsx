@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { base44 } from "../api/base44Client";
+import { useAuth } from "../context/AuthContext";
+import { redirecionarParaMercadoPago, getMercadoPagoCheckoutUrl } from "../lib/mercadoPago";
 import {
   Check,
   Zap,
@@ -16,6 +18,7 @@ import {
 
 export default function Planos() {
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const [loadingPlano, setLoadingPlano] = useState(null);
   const [statusMessage, setStatusMessage] = useState(null);
   const [billingPeriod, setBillingPeriod] = useState("mensal"); // mensal | anual
@@ -40,33 +43,32 @@ export default function Planos() {
   const handleAssinar = async (planoKey) => {
     try {
       setLoadingPlano(planoKey);
-      const res = await base44.functions.invoke("criarCheckoutStripe", {
-        plano: planoKey,
-        periodo: billingPeriod
-      });
+      const cfg = (await base44.entities.Configuracao.get()) || {};
+      const resultado = redirecionarParaMercadoPago(planoKey, cfg, user?.email);
 
-      if (res && res.data && res.data.url) {
-        window.location.href = res.data.url;
-      } else {
-        // Modo demo ou fallback
-        const nomePlano =
-          planoKey === "enterprise"
-            ? "Enterprise"
-            : planoKey === "profissional"
-            ? "Profissional"
-            : "Essencial";
-        setTimeout(() => {
-          setStatusMessage({
-            type: "success",
-            title: `Plano ${nomePlano} selecionado!`,
-            desc: "Ambiente de demonstração: simulação de checkout concluída com sucesso."
-          });
-          setLoadingPlano(null);
-        }, 1200);
+      if (resultado && resultado.sucesso) {
+        setLoadingPlano(null);
+        return;
       }
+
+      // Se ainda não tiver link do Mercado Pago configurado
+      const nomePlano =
+        planoKey === "enterprise"
+          ? "Enterprise (R$ 799,00)"
+          : planoKey === "profissional"
+          ? "Profissional (R$ 349,00)"
+          : "Essencial (R$ 149,00)";
+
+      setTimeout(() => {
+        setStatusMessage({
+          type: "warning",
+          title: `Plano ${nomePlano} - Mercado Pago`,
+          desc: "Link de checkout do Mercado Pago não configurado. Adicione seu link de pagamento oficial em Configurações > Mercado Pago para cobrar seus clientes no ar."
+        });
+        setLoadingPlano(null);
+      }, 700);
     } catch (err) {
-      console.error("Erro ao criar checkout:", err);
-      alert("Não foi possível iniciar o checkout no momento. Tente novamente.");
+      console.error("Erro ao processar checkout:", err);
       setLoadingPlano(null);
     }
   };

@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { MERCADO_PAGO_PLANS, redirecionarParaMercadoPago, getMercadoPagoCheckoutUrl } from "@/lib/mercadoPago";
+import {
+  MERCADO_PAGO_PLANS,
+  redirecionarParaMercadoPago,
+  getMercadoPagoCheckoutUrl,
+  isMercadoPagoConectado
+} from "@/lib/mercadoPago";
 import {
   Settings,
   Building2,
@@ -31,13 +36,15 @@ export default function Configuracoes() {
     tipo_chave_pix: "email",
     multa_percentual: 2.0,
     juros_mes_percentual: 1.0,
-    plano_atual: "pro",
-    limite_titulos: 300,
+    plano_atual: "profissional",
+    limite_titulos: 2000,
     mp_public_key: "",
     mp_access_token: "",
-    mp_link_starter: "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=recebeai-starter-119",
-    mp_link_pro: "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=recebeai-pro-299",
-    mp_link_enterprise: "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=recebeai-enterprise-699",
+    mp_link_essencial: "",
+    mp_link_profissional: "",
+    mp_link_enterprise: "",
+    mp_link_starter: "",
+    mp_link_pro: "",
   });
 
   const [loading, setLoading] = useState(true);
@@ -263,44 +270,66 @@ export default function Configuracoes() {
                 </p>
               </div>
             </div>
-            <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800">
-              Checkout Ativo
-            </span>
+            {isMercadoPagoConectado(config).conectado ? (
+              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Links Conectados</span>
+              </span>
+            ) : (
+              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                Pendente de Configuração
+              </span>
+            )}
           </div>
 
           <div className="mt-5 space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Link de Checkout Mercado Pago - Plano Starter (R$ 119)
+                Link de Checkout Mercado Pago - Plano Essencial (R$ 149,00/mês)
               </label>
               <input
                 type="url"
                 placeholder="https://mpago.la/... ou https://www.mercadopago.com.br/checkout/..."
-                value={config.mp_link_starter || ""}
-                onChange={(e) => setConfig({ ...config, mp_link_starter: e.target.value })}
+                value={config.mp_link_essencial || config.mp_link_starter || ""}
+                onChange={(e) =>
+                  setConfig({
+                    ...config,
+                    mp_link_essencial: e.target.value,
+                    mp_link_starter: e.target.value,
+                  })
+                }
                 className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs focus:border-sky-500 focus:outline-none font-mono"
               />
               <span className="text-[11px] text-slate-400">
-                Link de pagamento direto ou assinatura gerado na sua conta Mercado Pago
+                Link de pagamento direto ou assinatura gerado na sua conta Mercado Pago para o plano Essencial
               </span>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Link de Checkout Mercado Pago - Plano Profissional (R$ 299)
+                Link de Checkout Mercado Pago - Plano Profissional (R$ 349,00/mês)
               </label>
               <input
                 type="url"
                 placeholder="https://mpago.la/... ou https://www.mercadopago.com.br/checkout/..."
-                value={config.mp_link_pro || ""}
-                onChange={(e) => setConfig({ ...config, mp_link_pro: e.target.value })}
+                value={config.mp_link_profissional || config.mp_link_pro || ""}
+                onChange={(e) =>
+                  setConfig({
+                    ...config,
+                    mp_link_profissional: e.target.value,
+                    mp_link_pro: e.target.value,
+                  })
+                }
                 className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs focus:border-sky-500 focus:outline-none font-mono"
               />
+              <span className="text-[11px] text-slate-400">
+                Link de pagamento direto ou assinatura gerado na sua conta Mercado Pago para o plano Profissional
+              </span>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Link de Checkout Mercado Pago - Plano Enterprise (R$ 699)
+                Link de Checkout Mercado Pago - Plano Enterprise (R$ 799,00/mês)
               </label>
               <input
                 type="url"
@@ -309,6 +338,9 @@ export default function Configuracoes() {
                 onChange={(e) => setConfig({ ...config, mp_link_enterprise: e.target.value })}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs focus:border-sky-500 focus:outline-none font-mono"
               />
+              <span className="text-[11px] text-slate-400">
+                Link de pagamento direto ou assinatura gerado na sua conta Mercado Pago para o plano Enterprise
+              </span>
             </div>
 
             <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2">

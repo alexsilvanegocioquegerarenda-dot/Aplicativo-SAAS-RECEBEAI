@@ -329,13 +329,15 @@ const INITIAL_DATA = {
     tipo_chave_pix: "email",
     multa_percentual: 2.0,
     juros_mes_percentual: 1.0,
-    plano_atual: "pro", // 'starter' | 'pro' | 'enterprise'
-    limite_titulos: 300,
+    plano_atual: "profissional", // 'essencial' | 'profissional' | 'enterprise'
+    limite_titulos: 2000,
     mp_public_key: "",
     mp_access_token: "",
-    mp_link_starter: "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=recebeai-starter-119",
-    mp_link_pro: "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=recebeai-pro-299",
-    mp_link_enterprise: "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=recebeai-enterprise-699",
+    mp_link_essencial: "",
+    mp_link_profissional: "",
+    mp_link_enterprise: "",
+    mp_link_starter: "",
+    mp_link_pro: "",
   },
 };
 
