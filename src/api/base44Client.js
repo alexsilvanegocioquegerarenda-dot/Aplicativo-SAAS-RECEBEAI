@@ -339,25 +339,46 @@ const INITIAL_DATA = {
   },
 };
 
-function getLocalData(entityName) {
+function getActiveTenantId() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_PREFIX + entityName);
+    const raw = localStorage.getItem("recebeai_auth_user");
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u?.empresa_id) return u.empresa_id;
+    }
+  } catch (e) {}
+  return "emp-demo-techsolutions";
+}
+
+function getLocalData(entityName) {
+  const tenantId = getActiveTenantId();
+  const storageKey = `${STORAGE_KEY_PREFIX}${tenantId}_${entityName}`;
+  try {
+    const raw = localStorage.getItem(storageKey);
     if (raw) {
       return JSON.parse(raw);
     }
   } catch (e) {
-    console.warn("Erro ao ler localStorage:", e);
+    console.warn("Erro ao ler localStorage multi-tenant:", e);
   }
-  const defaultData = INITIAL_DATA[entityName] || [];
+
+  // Apenas as contas de demonstração iniciam com dados pré-populados
+  const isDemoTenant =
+    tenantId === "emp-demo-techsolutions" ||
+    tenantId === "emp-master-recebeai";
+
+  const defaultData = isDemoTenant ? INITIAL_DATA[entityName] || [] : [];
   setLocalData(entityName, defaultData);
   return defaultData;
 }
 
 function setLocalData(entityName, data) {
+  const tenantId = getActiveTenantId();
+  const storageKey = `${STORAGE_KEY_PREFIX}${tenantId}_${entityName}`;
   try {
-    localStorage.setItem(STORAGE_KEY_PREFIX + entityName, JSON.stringify(data));
+    localStorage.setItem(storageKey, JSON.stringify(data));
   } catch (e) {
-    console.warn("Erro ao salvar localStorage:", e);
+    console.warn("Erro ao salvar localStorage multi-tenant:", e);
   }
 }
 

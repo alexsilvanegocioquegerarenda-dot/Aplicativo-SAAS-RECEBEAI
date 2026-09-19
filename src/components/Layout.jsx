@@ -68,7 +68,7 @@ export default function Layout({ children }) {
   ];
 
   const isActive = (path) => {
-    if (path === "/dashboard" && (location.pathname === "/" || location.pathname === "/dashboard")) {
+    if (path === "/dashboard" && location.pathname === "/dashboard") {
       return true;
     }
     if (path === "/recuperacao" && (location.pathname === "/recuperacao" || location.pathname === "/relatorios")) {
@@ -79,7 +79,9 @@ export default function Layout({ children }) {
 
   const nomesPlanos = {
     starter: "Plano Starter",
+    essencial: "Plano Essencial",
     pro: "Plano Profissional",
+    profissional: "Plano Profissional",
     enterprise: "Plano Enterprise",
   };
 
@@ -197,7 +199,7 @@ export default function Layout({ children }) {
               <div className="truncate">
                 <div className="truncate text-xs font-bold text-slate-900">{user?.nome || "Usuário"}</div>
                 <div className="truncate text-[11px] text-slate-400">
-                  {isAdmin ? "Super Administrador" : (user?.email || "Cliente")}
+                  {isAdmin ? "Super Administrador Master" : (user?.empresa_nome || user?.empresa || user?.email || "Minha Empresa")}
                 </div>
               </div>
             </div>

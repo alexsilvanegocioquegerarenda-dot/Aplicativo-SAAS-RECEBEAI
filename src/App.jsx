@@ -3,7 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
+import Cadastro from './pages/Cadastro';
 import Dashboard from './pages/Dashboard';
 import Clientes from './pages/Clientes';
 import ClienteDetalhes from './pages/ClienteDetalhes';
@@ -27,17 +29,20 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Rota pública de Login */}
-          <Route path="/login" element={<Login />} />
+          {/* 1. Primeira página do aplicativo: Landing Page de vendas e conversão */}
+          <Route path="/" element={<LandingPage />} />
 
-          {/* Rotas protegidas envolvidas pelo Layout */}
+          {/* 2. Rotas públicas de Autenticação Multi-empresa */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/cadastro" element={<Cadastro />} />
+
+          {/* 3. Rotas autenticadas da Plataforma SaaS envolvidas pelo Layout */}
           <Route
             path="/*"
             element={
               <ProtectedRoute>
                 <Layout>
                   <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/clientes" element={<Clientes />} />
                     <Route path="/clientes/:id" element={<ClienteDetalhes />} />
@@ -66,6 +71,7 @@ export default function App() {
                       }
                     />
 
+                    {/* Fallback de rotas internas redireciona para o Dashboard */}
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Routes>
                 </Layout>
