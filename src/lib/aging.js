@@ -1,4 +1,4 @@
-import { daysBetween } from "./format";
+import { daysBetween } from "./format.js";
 
 export const AGING_FAIXAS_KEYS = [
   "a_vencer",
