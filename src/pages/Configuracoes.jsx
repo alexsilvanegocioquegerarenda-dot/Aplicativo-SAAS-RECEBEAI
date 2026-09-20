@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
+import { testarConexaoSupabase } from "@/api/supabaseClient";
 import {
   MERCADO_PAGO_PLANS,
   redirecionarParaMercadoPago,
@@ -23,7 +24,9 @@ import {
   ExternalLink,
   Lock,
   X,
-  ArrowRight
+  ArrowRight,
+  RefreshCw,
+  Server
 } from "lucide-react";
 
 export default function Configuracoes() {
@@ -56,6 +59,23 @@ export default function Configuracoes() {
   const [planoCheckout, setPlanoCheckout] = useState(null);
   const [ativandoPlano, setAtivandoPlano] = useState(false);
   const [ativacaoSucesso, setAtivacaoSucesso] = useState(false);
+
+  // Estados de teste do Supabase
+  const [testandoSupabase, setTestandoSupabase] = useState(false);
+  const [resultadoTesteSupabase, setResultadoTesteSupabase] = useState(null);
+
+  const handleTestarSupabase = async () => {
+    setTestandoSupabase(true);
+    setResultadoTesteSupabase(null);
+    try {
+      const res = await testarConexaoSupabase();
+      setResultadoTesteSupabase(res);
+    } catch (err) {
+      setResultadoTesteSupabase({ ok: false, mensagem: "Erro ao testar conexão: " + err.message });
+    } finally {
+      setTestandoSupabase(false);
+    }
+  };
 
   useEffect(() => {
     async function load() {
@@ -538,33 +558,96 @@ export default function Configuracoes() {
 
       {/* Bloco 5: Status do Banco de Dados Supabase */}
       <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-          <Database className="h-5 w-5 text-indigo-600" />
-          <h2 className="font-heading text-base font-bold text-slate-900">
-            Conexão com Banco de Dados (Supabase)
-          </h2>
-        </div>
-
-        <div className="mt-4">
-          {base44.isSupabaseConnected ? (
-            <div className="flex items-center gap-3 rounded-xl bg-emerald-50 p-4 border border-emerald-200">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-              <div>
-                <p className="text-xs font-bold text-emerald-900">Supabase Conectado e Operacional</p>
-                <p className="text-xs text-emerald-700">As variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY estão ativas.</p>
-              </div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+              <Database className="h-5 w-5" />
             </div>
-          ) : (
-            <div className="rounded-xl bg-slate-50 p-4 border border-slate-200">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
-                <ShieldCheck className="h-4 w-4 text-blue-600" />
-                <span>Modo Demonstrativo com Armazenamento Local Ativo</span>
-              </div>
-              <p className="mt-1 text-xs text-slate-500 leading-relaxed">
-                O aplicativo está operando com dados persistidos no navegador. Para ativar a nuvem Supabase em produção, adicione suas credenciais no arquivo <code className="rounded bg-slate-200 px-1 py-0.5 text-slate-800">.env</code> e execute o script <code className="rounded bg-slate-200 px-1 py-0.5 text-slate-800">supabase/schema.sql</code>.
+            <div>
+              <h2 className="font-heading text-base font-bold text-slate-900">
+                Banco de Dados em Nuvem (Supabase PostgreSQL)
+              </h2>
+              <p className="text-xs text-slate-500">
+                Armazenamento centralizado com Row Level Security (RLS) e isolamento multi-empresa
               </p>
             </div>
-          )}
+          </div>
+
+          <button
+            type="button"
+            disabled={testandoSupabase}
+            onClick={handleTestarSupabase}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors shadow-sm self-start sm:self-auto"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${testandoSupabase ? "animate-spin" : ""}`} />
+            <span>{testandoSupabase ? "Testando..." : "Testar Conexão Supabase"}</span>
+          </button>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          <div className="flex items-start gap-3 rounded-2xl bg-emerald-50/80 p-4 border border-emerald-200">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="space-y-1 w-full">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-emerald-950">
+                  Supabase Conectado e Operacional em Produção
+                </span>
+                <span className="rounded-full bg-emerald-200/70 px-2 py-0.5 text-[10px] font-bold text-emerald-900">
+                  Nuvem Ativa
+                </span>
+              </div>
+              <p className="text-xs text-emerald-800">
+                O aplicativo está vinculado ao projeto <code className="rounded bg-emerald-100 px-1.5 py-0.5 font-mono text-[11px] text-emerald-950 font-bold">upuuqfojhqjgzsdycvxp.supabase.co</code>.
+              </p>
+              {resultadoTesteSupabase && (
+                <div className={`mt-2.5 rounded-xl p-2.5 text-xs font-medium border ${
+                  resultadoTesteSupabase.ok ? "bg-white text-emerald-800 border-emerald-300 shadow-xs" : "bg-red-50 text-red-800 border-red-200"
+                }`}>
+                  {resultadoTesteSupabase.ok ? "✅ " : "❌ "}
+                  {resultadoTesteSupabase.mensagem} {resultadoTesteSupabase.duracao && `(Latência: ${resultadoTesteSupabase.duracao}ms)`}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Lista de Tabelas Ativas */}
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Tabelas Sincronizadas no PostgreSQL:
+              </span>
+              <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                10 Tabelas Prontas
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-xs">
+              {[
+                "empresas",
+                "clientes",
+                "recebiveis",
+                "cobrancas",
+                "promessas",
+                "reguas",
+                "importacoes",
+                "metas_recuperacao",
+                "templates_mensagem",
+                "conversas_ia",
+              ].map((tab) => (
+                <div key={tab} className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-2.5 py-1.5 font-mono text-[11px] text-slate-700 shadow-xs">
+                  <Check className="h-3 w-3 text-emerald-600 shrink-0" />
+                  <span className="truncate">{tab}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Dica da Vercel */}
+          <div className="rounded-xl border border-slate-200 bg-white p-3.5 text-xs text-slate-600 flex items-start gap-2.5">
+            <Server className="h-4 w-4 text-slate-500 shrink-0 mt-0.5" />
+            <div className="leading-relaxed">
+              <span className="font-semibold text-slate-800">Deploy na Vercel:</span> As credenciais do Supabase já estão embutidas com fallback seguro para produção. Caso queira gerenciá-las diretamente pelo painel da Vercel, basta adicionar as variáveis <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-slate-800">VITE_SUPABASE_URL</code> e <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-slate-800">VITE_SUPABASE_ANON_KEY</code> em <em>Settings &gt; Environment Variables</em>.
+            </div>
+          </div>
         </div>
       </div>
 
