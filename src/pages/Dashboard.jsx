@@ -95,17 +95,65 @@ export default function Dashboard() {
     .filter((c) => c.totalAtrasado > 0)
     .sort((a, b) => b.totalAtrasado - a.totalAtrasado);
 
-  // Cálculo do DSO da Carteira
+  // Cálculo do DSO da Carteira (Days Sales Outstanding)
   const periodos = getDSOPeriodos();
   const dsoStats = calcularDSOPeriodo(recebiveis, periodos[0]); // últimos 30 dias
   const dsoDias = Math.round(dsoStats.dso || 0);
 
   const getStatusDSO = (dias) => {
-    if (dias === 0) return { label: "Sem dados", cor: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" };
-    if (dias <= 30) return { label: "Excelente", cor: "text-emerald-700", bg: "bg-emerald-50/50", border: "border-emerald-200" };
-    if (dias <= 45) return { label: "Saudável", cor: "text-blue-700", bg: "bg-blue-50/50", border: "border-blue-200" };
-    if (dias <= 60) return { label: "Atenção", cor: "text-amber-700", bg: "bg-amber-50/50", border: "border-amber-200" };
-    return { label: "Crítico", cor: "text-rose-700", bg: "bg-rose-50/50", border: "border-rose-200" };
+    if (dias === 0) {
+      return {
+        label: "Sem dados",
+        cor: "text-slate-600",
+        bg: "bg-slate-50",
+        border: "border-slate-200",
+        badgeBg: "bg-slate-100 text-slate-700",
+        barColor: "bg-slate-400",
+        diag: "Cadastre ou importe faturas para calcular o prazo médio de recebimento da carteira.",
+      };
+    }
+    if (dias <= 30) {
+      return {
+        label: "Excelente",
+        cor: "text-emerald-700",
+        bg: "bg-emerald-50/60",
+        border: "border-emerald-200",
+        badgeBg: "bg-emerald-100 text-emerald-800",
+        barColor: "bg-emerald-500",
+        diag: "Excelente! Seus clientes pagam em média dentro de 30 dias. Seu caixa opera com alta liquidez e previsibilidade.",
+      };
+    }
+    if (dias <= 45) {
+      return {
+        label: "Saudável",
+        cor: "text-blue-700",
+        bg: "bg-blue-50/60",
+        border: "border-blue-200",
+        badgeBg: "bg-blue-100 text-blue-800",
+        barColor: "bg-blue-500",
+        diag: "Saudável. O prazo de recebimento está controlado. Ative lembretes preventivos D-3 para antecipar liquidações.",
+      };
+    }
+    if (dias <= 60) {
+      return {
+        label: "Atenção",
+        cor: "text-amber-700",
+        bg: "bg-amber-50/60",
+        border: "border-amber-200",
+        badgeBg: "bg-amber-100 text-amber-800",
+        barColor: "bg-amber-500",
+        diag: "Atenção requerida. Seus clientes demoram mais de 45 dias para pagar. Recomendamos intensificar a régua no D+3 e D+10.",
+      };
+    }
+    return {
+      label: "Crítico",
+      cor: "text-rose-700",
+      bg: "bg-rose-50/60",
+      border: "border-rose-200",
+      badgeBg: "bg-rose-100 text-rose-800",
+      barColor: "bg-rose-500",
+      diag: "Alerta Crítico! O DSO elevado compromete o capital de giro. Priorize o contato com os maiores devedores listados abaixo.",
+    };
   };
 
   const statusDSO = getStatusDSO(dsoDias);
@@ -229,6 +277,68 @@ export default function Dashboard() {
                 Ver DSO &rarr;
               </Link>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Widget Destaque: DSO da Carteira & Saúde Financeira */}
+      <div className="mb-8 rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/70 via-white to-purple-50/40 p-6 shadow-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-600/20">
+              <Activity className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-heading text-base font-bold text-slate-900">
+                  DSO da Carteira (Days Sales Outstanding)
+                </h2>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${statusDSO.badgeBg} border ${statusDSO.border}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${statusDSO.barColor} animate-pulse`} />
+                  {statusDSO.label} • {dsoDias} dias
+                </span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                  Meta Recomendada: &le; 30 dias
+                </span>
+              </div>
+              <p className="mt-1.5 text-xs text-slate-600 max-w-2xl leading-relaxed">
+                {statusDSO.diag}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="text-right hidden sm:block">
+              <div className="text-xs text-slate-400 font-medium">Contas a Receber (AR)</div>
+              <div className="text-sm font-bold text-slate-800">{formatCurrency(dsoStats.ar || totalAberto)}</div>
+            </div>
+            <Link
+              to="/dso"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm shadow-indigo-600/20 hover:bg-indigo-700 transition-colors"
+            >
+              <span>Relatório de DSO</span>
+              <ArrowUpRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Barra Termômetro do DSO */}
+        <div className="mt-5 pt-4 border-t border-indigo-100/70">
+          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 mb-1.5">
+            <span>Escala de Liquidez do RecebeAi:</span>
+            <span className="text-indigo-900 font-bold">Posição Atual: {dsoDias} dias</span>
+          </div>
+          <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-slate-100 flex">
+            <div className="w-[33%] bg-emerald-400" title="Excelente (0 a 30 dias)" />
+            <div className="w-[17%] bg-blue-400" title="Saudável (31 a 45 dias)" />
+            <div className="w-[17%] bg-amber-400" title="Atenção (46 a 60 dias)" />
+            <div className="w-[33%] bg-rose-500" title="Crítico (> 60 dias)" />
+          </div>
+          <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-medium">
+            <span className="text-emerald-700 font-semibold">0 - 30d (Excelente)</span>
+            <span className="text-blue-700 font-semibold">31 - 45d (Saudável)</span>
+            <span className="text-amber-700 font-semibold">46 - 60d (Atenção)</span>
+            <span className="text-rose-700 font-semibold">&gt; 60d (Crítico)</span>
           </div>
         </div>
       </div>

@@ -21,7 +21,6 @@ export default function Planos() {
   const { user } = useAuth();
   const [loadingPlano, setLoadingPlano] = useState(null);
   const [statusMessage, setStatusMessage] = useState(null);
-  const [billingPeriod, setBillingPeriod] = useState("mensal"); // mensal | anual
 
   useEffect(() => {
     const status = searchParams.get("status");
@@ -78,8 +77,7 @@ export default function Planos() {
       id: "essencial",
       nome: "Essencial",
       descricao: "Ideal para pequenas empresas e autônomos organizarem e automatizarem suas cobranças.",
-      precoMensal: 149,
-      precoAnual: 119, // ~20% off
+      preco: 149,
       destaque: false,
       recursos: [
         "Até 300 clientes cadastrados",
@@ -99,8 +97,7 @@ export default function Planos() {
       nome: "Profissional",
       badge: "Mais Popular",
       descricao: "Solução completa com automação de IA, régua avançada e sem limites de carteira.",
-      precoMensal: 349,
-      precoAnual: 279, // ~20% off
+      preco: 349,
       destaque: true,
       recursos: [
         "Clientes e recebíveis ilimitados",
@@ -120,8 +117,7 @@ export default function Planos() {
       nome: "Enterprise",
       badge: "Corporativo",
       descricao: "Para médias e grandes operações que exigem escala, múltiplos acessos e integrações diretas.",
-      precoMensal: 799,
-      precoAnual: 639, // ~20% off
+      preco: 799,
       destaque: false,
       isEnterprise: true,
       recursos: [
@@ -142,11 +138,11 @@ export default function Planos() {
   const faqs = [
     {
       q: "Posso cancelar a qualquer momento?",
-      a: "Sim, você pode cancelar sua assinatura mensal ou anual a qualquer momento sem multas ou taxas adicionais."
+      a: "Sim, você pode cancelar sua assinatura mensal a qualquer momento sem multas, taxas adicionais ou carência."
     },
     {
       q: "Como funciona a cobrança?",
-      a: "O pagamento é processado com total segurança via Stripe através de cartão de crédito ou boleto bancário recorrente."
+      a: "O pagamento é processado com total segurança via Mercado Pago através de PIX instantâneo, cartão de crédito ou boleto bancário."
     },
     {
       q: "Há período de teste gratuito?",
@@ -164,42 +160,21 @@ export default function Planos() {
       <div className="text-center space-y-4 pt-4">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 text-xs font-semibold tracking-wide uppercase">
           <Sparkles className="w-3.5 h-3.5" />
-          Planos Transparentes e Sem Surpresas
+          Planos Oficiais & Sem Surpresas
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
           Recupere mais recebíveis com o plano certo
         </h1>
         <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-          Automatize réguas, calcule prazos médios de recebimento (DSO) e conte com Inteligência Artificial para acelerar o fluxo de caixa.
+          Valores fixos mensais com checkout direto no Mercado Pago: Essencial (R$ 149), Profissional (R$ 349) e Enterprise (R$ 799).
         </p>
 
-        {/* Billing toggle */}
-        <div className="flex items-center justify-center pt-2">
-          <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-xl inline-flex items-center gap-1 border border-gray-200 dark:border-gray-700">
-            <button
-              onClick={() => setBillingPeriod("mensal")}
-              className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                billingPeriod === "mensal"
-                  ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900"
-              }`}
-            >
-              Mensal
-            </button>
-            <button
-              onClick={() => setBillingPeriod("anual")}
-              className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all inline-flex items-center gap-1.5 ${
-                billingPeriod === "anual"
-                  ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900"
-              }`}
-            >
-              <span>Anual</span>
-              <span className="text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded">
-                -20%
-              </span>
-            </button>
-          </div>
+        {/* Badge Informativa */}
+        <div className="flex items-center justify-center pt-1">
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            Assinatura mensal sem fidelidade • Cancele quando quiser • 7 dias de garantia
+          </span>
         </div>
       </div>
 
@@ -227,7 +202,6 @@ export default function Planos() {
       {/* Cards dos Planos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto items-stretch">
         {planos.map((plano) => {
-          const preco = billingPeriod === "anual" ? plano.precoAnual : plano.precoMensal;
           const isLoading = loadingPlano === plano.id;
 
           return (
@@ -275,14 +249,9 @@ export default function Planos() {
                 <div className="flex items-baseline gap-1 mb-6 pb-6 border-b border-gray-100 dark:border-gray-800">
                   <span className="text-sm text-gray-500 font-medium">R$</span>
                   <span className="text-4xl sm:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-                    {preco}
+                    {plano.preco}
                   </span>
                   <span className="text-sm text-gray-500 font-medium">,00/mês</span>
-                  {billingPeriod === "anual" && (
-                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold ml-2">
-                      (cobrado anualmente)
-                    </span>
-                  )}
                 </div>
 
                 {/* Lista de Recursos */}

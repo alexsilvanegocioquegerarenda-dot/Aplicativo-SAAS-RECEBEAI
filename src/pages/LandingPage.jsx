@@ -26,7 +26,6 @@ import {
 export default function LandingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [billingPeriod, setBillingPeriod] = useState("mensal");
   const [faqAberto, setFaqAberto] = useState(null);
 
   const toggleFaq = (index) => {
@@ -37,8 +36,7 @@ export default function LandingPage() {
     {
       id: "essencial",
       nome: "Essencial",
-      precoMensal: 149,
-      precoAnual: 119,
+      preco: 149,
       descricao: "Ideal para pequenas empresas e autônomos organizarem suas cobranças.",
       destaque: false,
       recursos: [
@@ -57,8 +55,7 @@ export default function LandingPage() {
       id: "profissional",
       nome: "Profissional",
       badge: "Mais Escolhido",
-      precoMensal: 349,
-      precoAnual: 279,
+      preco: 349,
       descricao: "Solução completa com automação de IA, régua avançada e sem limites operacionais.",
       destaque: true,
       recursos: [
@@ -77,8 +74,7 @@ export default function LandingPage() {
       id: "enterprise",
       nome: "Enterprise",
       badge: "Corporativo",
-      precoMensal: 799,
-      precoAnual: 639,
+      preco: 799,
       descricao: "Para médias e grandes operações que exigem escala, múltiplos acessos e integrações diretas.",
       destaque: false,
       isEnterprise: true,
@@ -501,42 +497,18 @@ export default function LandingPage() {
             Comece hoje com 7 dias de garantia incondicional. Sem contratos de longo prazo nem letras miúdas.
           </p>
 
-          {/* Toggle Mensal / Anual */}
+          {/* Selo Informativo de Preços Fixos */}
           <div className="flex items-center justify-center mt-6">
-            <div className="bg-slate-900 p-1.5 rounded-2xl inline-flex items-center gap-1 border border-slate-800">
-              <button
-                type="button"
-                onClick={() => setBillingPeriod("mensal")}
-                className={`px-5 py-2 text-xs font-semibold rounded-xl transition-all ${
-                  billingPeriod === "mensal"
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                Cobrança Mensal
-              </button>
-              <button
-                type="button"
-                onClick={() => setBillingPeriod("anual")}
-                className={`px-5 py-2 text-xs font-semibold rounded-xl transition-all inline-flex items-center gap-1.5 ${
-                  billingPeriod === "anual"
-                    ? "bg-emerald-600 text-white shadow-sm"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                <span>Cobrança Anual</span>
-                <span className="text-[10px] bg-emerald-400/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded">
-                  -20% OFF
-                </span>
-              </button>
-            </div>
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-slate-300 font-semibold shadow-sm">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              Preços fixos mensais sem pegadinhas • Cancele quando quiser • 7 dias de garantia
+            </span>
           </div>
         </div>
 
         {/* Cards dos 3 Planos */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
           {planos.map((plano) => {
-            const preco = billingPeriod === "anual" ? plano.precoAnual : plano.precoMensal;
             return (
               <div
                 key={plano.id}
@@ -574,7 +546,7 @@ export default function LandingPage() {
                   <div className="flex items-baseline gap-1 mb-6 pb-6 border-b border-slate-800">
                     <span className="text-sm text-slate-400 font-medium">R$</span>
                     <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
-                      {preco}
+                      {plano.preco}
                     </span>
                     <span className="text-sm text-slate-400 font-medium">,00/mês</span>
                   </div>
