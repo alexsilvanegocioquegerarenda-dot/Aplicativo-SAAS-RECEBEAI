@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, daysBetween } from "@/lib/format";
 import {
   FileSpreadsheet,
   Upload,
@@ -13,7 +13,11 @@ import {
   FileText,
   Clock,
   ArrowUpRight,
-  Database
+  Database,
+  Download,
+  Check,
+  AlertTriangle,
+  RotateCw
 } from "lucide-react";
 
 const ORIGEM_CONFIG = {
@@ -23,16 +27,28 @@ const ORIGEM_CONFIG = {
 };
 
 export default function Importacoes() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [importacoes, setImportacoes] = useState([]);
   const [loteSelecionado, setLoteSelecionado] = useState(null);
   const [titulosDoLote, setTitulosDoLote] = useState([]);
   const [carregandoTitulos, setCarregandoTitulos] = useState(false);
 
+  // Estados do Modal de Importação CSV
+  const [modalUploadOpen, setModalUploadOpen] = useState(false);
+  const [arquivoCSV, setArquivoCSV] = useState(null);
+  const [linhasPrevia, setLinhasPrevia] = useState([]);
+  const [totalValido, setTotalValido] = useState(0);
+  const [valorTotalPrevisto, setValorTotalPrevisto] = useState(0);
+  const [errosLeitura, setErrosLeitura] = useState([]);
+  const [processandoImportacao, setProcessandoImportacao] = useState(false);
+  const [sucessoImportacao, setSucessoImportacao] = useState(false);
+  const fileInputRef = useRef(null);
+
   const carregarImportacoes = async () => {
     try {
       const lista = await base44.entities.Importacao.list("-created_date", 100);
-      setImportacoes(lista);
+      setImportacoes(lista || []);
     } finally {
       setLoading(false);
     }
@@ -40,16 +56,224 @@ export default function Importacoes() {
 
   useEffect(() => {
     carregarImportacoes();
-  }, []);
+    if (searchParams.get("abrir") === "1") {
+      setModalUploadOpen(true);
+    }
+  }, [searchParams]);
 
   const handleAbrirDetalhes = async (lote) => {
     setLoteSelecionado(lote);
     setCarregandoTitulos(true);
     try {
-      const recs = await base44.entities.Recebivel.filter({ importacao_id: lote.id });
+      const todosRecs = await base44.entities.Recebivel.list();
+      const recs = todosRecs.filter((r) => String(r.importacao_id) === String(lote.id));
       setTitulosDoLote(recs);
     } finally {
       setCarregandoTitulos(false);
+    }
+  };
+
+  // Gerar e baixar arquivo CSV modelo
+  const handleBaixarModelo = () => {
+    const csvContent =
+      "nome_cliente;cnpj;telefone;email;nota_fiscal;descricao;valor;vencimento\n" +
+      "Empresa Exemplo Alpha Ltda;12.345.678/0001-90;(11) 98765-4321;financeiro@alpha.com.br;NF-1001;Serviço de Consultoria;4500.00;2026-10-15\n" +
+      "Comércio Beta Varejo S.A.;98.765.432/0001-10;(21) 99123-4567;contas@betavarejo.com;NF-1002;Fornecimento de Insumos;8900.50;2026-09-30\n" +
+      "Indústria Delta Brasil;45.678.901/0001-22;(31) 97777-8888;cobranca@deltabrasil.ind.br;NF-1003;Licença de Software Mensal;1200.00;2026-09-10\n";
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "modelo_importacao_recebeai.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Processamento e Parser do arquivo CSV
+  const handleArquivoSelecionado = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setArquivoCSV(file);
+    setErrosLeitura([]);
+    setSucessoImportacao(false);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const text = evt.target.result;
+        const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+
+        if (lines.length < 2) {
+          setErrosLeitura(["O arquivo precisa conter uma linha de cabeçalho e pelo menos um título."]);
+          return;
+        }
+
+        // Detecta separador (, ou ;)
+        const headerLine = lines[0];
+        const separator = headerLine.includes(";") ? ";" : ",";
+        const headers = headerLine.split(separator).map((h) => h.trim().toLowerCase().replace(/["']/g, ""));
+
+        // Mapeamento de índices de colunas
+        const findIndex = (aliases) => headers.findIndex((h) => aliases.some((a) => h.includes(a)));
+
+        const idxNome = findIndex(["cliente", "nome", "razao"]);
+        const idxCnpj = findIndex(["cnpj", "cpf", "documento"]);
+        const idxTel = findIndex(["telefone", "whatsapp", "celular", "fone"]);
+        const idxEmail = findIndex(["email", "e-mail"]);
+        const idxNf = findIndex(["nota", "nf", "titulo", "numero", "doc"]);
+        const idxDesc = findIndex(["descricao", "desc", "servico", "historico"]);
+        const idxValor = findIndex(["valor", "total", "saldo"]);
+        const idxVenc = findIndex(["vencimento", "venc", "data"]);
+
+        if (idxNome === -1 || idxValor === -1 || idxVenc === -1) {
+          setErrosLeitura([
+            "Colunas essenciais ausentes no cabeçalho. Certifique-se de ter pelo menos 'nome_cliente', 'valor' e 'vencimento'. Utilize nosso modelo padrão se tiver dúvidas.",
+          ]);
+          return;
+        }
+
+        const parsedRows = [];
+        let somaValores = 0;
+        let erros = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const rawCols = lines[i].split(separator).map((c) => c.trim().replace(/^["']|["']$/g, ""));
+          if (rawCols.length < 2) continue;
+
+          const nomeCliente = rawCols[idxNome] || "";
+          const cnpj = idxCnpj !== -1 ? rawCols[idxCnpj] || "" : "";
+          const telefone = idxTel !== -1 ? rawCols[idxTel] || "" : "";
+          const email = idxEmail !== -1 ? rawCols[idxEmail] || "" : "";
+          const nf = idxNf !== -1 ? rawCols[idxNf] || `NF-${Math.floor(1000 + Math.random() * 9000)}` : `NF-${i}`;
+          const desc = idxDesc !== -1 ? rawCols[idxDesc] || "Fatura Importada via CSV" : "Fatura Importada via CSV";
+
+          let rawValor = rawCols[idxValor] || "0";
+          rawValor = rawValor.replace("R$", "").replace(/\./g, "").replace(",", ".").trim();
+          const valor = parseFloat(rawValor);
+
+          const vencimento = rawCols[idxVenc] || "";
+
+          if (!nomeCliente) {
+            erros.push(`Linha ${i + 1}: Nome do cliente vazio.`);
+            continue;
+          }
+          if (isNaN(valor) || valor <= 0) {
+            erros.push(`Linha ${i + 1}: Valor inválido para ${nomeCliente}.`);
+            continue;
+          }
+
+          somaValores += valor;
+          parsedRows.push({
+            nomeCliente,
+            cnpj,
+            telefone,
+            email,
+            nota_fiscal: nf,
+            descricao: desc,
+            valor,
+            vencimento: vencimento.slice(0, 10),
+          });
+        }
+
+        setLinhasPrevia(parsedRows);
+        setTotalValido(parsedRows.length);
+        setValorTotalPrevisto(somaValores);
+        setErrosLeitura(erros);
+      } catch (err) {
+        console.error("Erro no parse CSV:", err);
+        setErrosLeitura(["Erro ao processar o formato do arquivo CSV. Verifique a codificação UTF-8."]);
+      }
+    };
+
+    reader.readAsText(file, "UTF-8");
+  };
+
+  // Gravar Lote e Títulos na Carteira
+  const handleConfirmarImportacao = async () => {
+    if (linhasPrevia.length === 0) return;
+    setProcessandoImportacao(true);
+
+    try {
+      const loteId = `imp-${Date.now().toString(36)}`;
+      const nomeArq = arquivoCSV?.name || "importacao_planilha.csv";
+
+      // 1. Cria o Lote na entidade Importacao
+      const novoLote = await base44.entities.Importacao.create({
+        id: loteId,
+        nome_arquivo: nomeArq,
+        origem: "csv",
+        quantidade_registros: linhasPrevia.length,
+        valor_total: valorTotalPrevisto,
+        status: "concluida",
+        detalhes: `${linhasPrevia.length} títulos importados com sucesso via CSV`,
+      });
+
+      // 2. Busca clientes existentes para reaproveitamento por nome ou CNPJ
+      const clientesAtuais = await base44.entities.Cliente.list();
+      const clientesMap = new Map();
+      clientesAtuais.forEach((c) => {
+        if (c.cnpj) clientesMap.set(c.cnpj.replace(/\D/g, ""), c.id);
+        clientesMap.set(c.nome.toLowerCase().trim(), c.id);
+      });
+
+      // 3. Itera linhas criando/reaproveitando clientes e criando os recebíveis
+      for (const row of linhasPrevia) {
+        const cnpjClean = row.cnpj.replace(/\D/g, "");
+        const nomeClean = row.nomeCliente.toLowerCase().trim();
+
+        let clienteId = clientesMap.get(cnpjClean) || clientesMap.get(nomeClean);
+
+        if (!clienteId) {
+          const novoCli = await base44.entities.Cliente.create({
+            nome: row.nomeCliente,
+            cnpj: row.cnpj,
+            telefone: row.telefone,
+            email: row.email,
+            status: "em_dia",
+            risco: "baixo",
+            limite_credito: 25000,
+          });
+          clienteId = novoCli.id;
+          if (cnpjClean) clientesMap.set(cnpjClean, clienteId);
+          clientesMap.set(nomeClean, clienteId);
+        }
+
+        const dias = daysBetween(row.vencimento);
+        let status = "em_dia";
+        if (dias > 0) status = "atrasado";
+        else if (dias > -7) status = "a_vencer";
+
+        await base44.entities.Recebivel.create({
+          cliente_id: clienteId,
+          cliente_nome: row.nomeCliente,
+          importacao_id: loteId,
+          nota_fiscal: row.nota_fiscal,
+          descricao: row.descricao,
+          valor: row.valor,
+          valor_pago: 0,
+          vencimento: row.vencimento,
+          status,
+          forma_pagamento: "pix",
+        });
+      }
+
+      setSucessoImportacao(true);
+      await carregarImportacoes();
+
+      setTimeout(() => {
+        setModalUploadOpen(false);
+        setArquivoCSV(null);
+        setLinhasPrevia([]);
+        setSucessoImportacao(false);
+      }, 1500);
+    } catch (err) {
+      console.error("Erro na importação:", err);
+      setErrosLeitura(["Erro ao gravar dados no sistema: " + err.message]);
+    } finally {
+      setProcessandoImportacao(false);
     }
   };
 
@@ -70,7 +294,7 @@ export default function Importacoes() {
             <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
               Importações e Lotes
             </h1>
-            <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+            <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
               Rastreabilidade
             </span>
           </div>
@@ -79,30 +303,51 @@ export default function Importacoes() {
           </p>
         </div>
 
-        <Link
-          to="/recebiveis"
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm shadow-blue-500/20 hover:bg-blue-700 transition-colors"
-        >
-          <Upload className="h-4 w-4" />
-          <span>Importar Nova Planilha</span>
-        </Link>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            type="button"
+            onClick={handleBaixarModelo}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
+          >
+            <Download className="h-4 w-4 text-slate-500" />
+            <span>Baixar Modelo CSV</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setModalUploadOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm shadow-blue-500/20 hover:bg-blue-700 transition-colors"
+          >
+            <Upload className="h-4 w-4" />
+            <span>Importar Planilha CSV</span>
+          </button>
+        </div>
       </div>
 
       {/* Lista de Lotes */}
       {importacoes.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
+        <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm">
           <FileSpreadsheet className="mx-auto h-12 w-12 text-slate-300" />
           <h3 className="mt-4 text-base font-semibold text-slate-900">Nenhum lote importado ainda</h3>
           <p className="mt-1 text-sm text-slate-500 max-w-md mx-auto">
-            Ao importar planilhas Excel ou arquivos CSV na página de Recebíveis, os lotes aparecerão registrados aqui para rastreabilidade.
+            Importe planilhas CSV do seu ERP ou sistema de vendas para popular sua carteira em segundos.
           </p>
-          <Link
-            to="/recebiveis"
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-          >
-            <Upload className="h-3.5 w-3.5" />
-            <span>Ir para Recebíveis</span>
-          </Link>
+          <div className="mt-6 flex items-center justify-center gap-3">
+            <button
+              onClick={handleBaixarModelo}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <Download className="h-4 w-4" />
+              <span>Baixar Modelo de Exemplo</span>
+            </button>
+            <button
+              onClick={() => setModalUploadOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+            >
+              <Upload className="h-4 w-4" />
+              <span>Importar Arquivo CSV</span>
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -151,7 +396,7 @@ export default function Importacoes() {
                     </div>
 
                     {lote.detalhes && (
-                      <p className="mt-1 text-xs text-red-600 truncate">{lote.detalhes}</p>
+                      <p className="mt-1 text-xs text-slate-600 truncate">{lote.detalhes}</p>
                     )}
                   </div>
                 </div>
@@ -167,6 +412,160 @@ export default function Importacoes() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Modal Interativo de Upload de Planilha CSV */}
+      {modalUploadOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-100 p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <Upload className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="font-heading text-lg font-bold text-slate-900">
+                    Importar Planilha de Títulos (CSV)
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Traga centenas de faturas com clientes, valores e vencimentos de uma só vez
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setModalUploadOpen(false)}
+                className="rounded-xl p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Área de Seleção de Arquivo */}
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="cursor-pointer rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/40 p-8 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/70"
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  onChange={handleArquivoSelecionado}
+                  className="hidden"
+                />
+                <FileSpreadsheet className="mx-auto h-12 w-12 text-blue-500 mb-2" />
+                <p className="text-sm font-bold text-slate-800">
+                  {arquivoCSV ? arquivoCSV.name : "Clique para selecionar seu arquivo CSV"}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Suporta arquivos .CSV separados por vírgula (,) ou ponto-e-vírgula (;)
+                </p>
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleBaixarModelo();
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    <span>Baixar planilha modelo de exemplo</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Erros de Validação se houver */}
+              {errosLeitura.length > 0 && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-bold text-red-800">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>Atenção na leitura do arquivo:</span>
+                  </div>
+                  <ul className="text-xs text-red-700 list-disc list-inside space-y-0.5">
+                    {errosLeitura.slice(0, 4).map((err, idx) => (
+                      <li key={idx}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Pré-visualização dos Dados */}
+              {linhasPrevia.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-800">
+                      Pré-visualização ({totalValido} títulos válidos)
+                    </span>
+                    <span className="font-bold text-emerald-600">
+                      Total: {formatCurrency(valorTotalPrevisto)}
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-[11px] font-semibold text-slate-500 border-b border-slate-200">
+                        <tr>
+                          <th className="p-3">Cliente</th>
+                          <th className="p-3">NF</th>
+                          <th className="p-3">Vencimento</th>
+                          <th className="p-3 text-right">Valor</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {linhasPrevia.slice(0, 5).map((row, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50">
+                            <td className="p-3 font-medium text-slate-800">{row.nomeCliente}</td>
+                            <td className="p-3 font-mono text-slate-600">{row.nota_fiscal}</td>
+                            <td className="p-3 text-slate-600">{formatDate(row.vencimento)}</td>
+                            <td className="p-3 text-right font-bold text-slate-900">{formatCurrency(row.valor)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {linhasPrevia.length > 5 && (
+                    <p className="text-[11px] text-center text-slate-400">
+                      + {linhasPrevia.length - 5} títulos adicionais no arquivo
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {sucessoImportacao && (
+                <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-xs font-bold text-emerald-800">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  <span>Lote importado com sucesso! Seus clientes e títulos já estão na carteira.</span>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-slate-100 p-4 flex items-center justify-between bg-slate-50/50">
+              <button
+                type="button"
+                onClick={() => setModalUploadOpen(false)}
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                disabled={linhasPrevia.length === 0 || processandoImportacao || sucessoImportacao}
+                onClick={handleConfirmarImportacao}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-blue-600/20"
+              >
+                <Upload className={`h-4 w-4 ${processandoImportacao ? "animate-bounce" : ""}`} />
+                <span>
+                  {processandoImportacao
+                    ? "Importando títulos..."
+                    : `Confirmar e Importar (${totalValido} faturas)`}
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -229,7 +628,7 @@ export default function Importacoes() {
                 </div>
               ) : titulosDoLote.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-xs text-slate-500">
-                  Nenhum título detalhado individualmente vinculado a este ID de lote (importação consolidada).
+                  Nenhum título detalhado individualmente vinculado a este ID de lote.
                 </div>
               ) : (
                 <div className="space-y-2">

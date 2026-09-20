@@ -11,7 +11,8 @@ import {
   Clock,
   X,
   MessageSquare,
-  FileText
+  FileText,
+  Upload
 } from "lucide-react";
 
 export default function Recebiveis() {
@@ -154,13 +155,22 @@ export default function Recebiveis() {
           </p>
         </div>
 
-        <button
-          onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm shadow-blue-600/20 hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Cadastrar Novo Título</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/importacoes?abrir=1"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
+          >
+            <Upload className="h-4 w-4 text-slate-500" />
+            <span>Importar CSV</span>
+          </Link>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm shadow-blue-600/20 hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Cadastrar Novo Título</span>
+          </button>
+        </div>
       </div>
 
       {/* Tabs & Busca */}
