@@ -1,0 +1,36 @@
+name: CI & Supabase Sync
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Código
+        uses: actions/checkout@v3
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar Dependências
+        run: npm ci
+
+      - name: Executar Suíte de Testes Automatizados QA
+        run: npm test
+
+      - name: Validar Build de Produção
+        run: npm run build
+
+      - name: Auditar e Sincronizar Tabelas do Supabase
+        run: npm run supabase:sync
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://upuuqfojhqjgzsdycvxp.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'sb_publishable_kT4M2GSyV2p0lY1ZRN6R5w_P85qxBAV' }}
