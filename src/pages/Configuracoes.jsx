@@ -423,44 +423,45 @@ export default function Configuracoes() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          {/* Starter */}
+          {/* Essencial */}
           <div className={`rounded-2xl border p-5 bg-white flex flex-col justify-between transition-all ${
-            planoAtivoId === "starter" ? "border-blue-600 ring-2 ring-blue-600/20 shadow-md" : "border-slate-200"
+            planoAtivoId === "essencial" || planoAtivoId === "starter" ? "border-emerald-600 ring-2 ring-emerald-600/20 shadow-md" : "border-slate-200"
           }`}>
             <div>
               <div className="flex items-center justify-between">
-                <h3 className="font-heading text-base font-bold text-slate-900">Starter</h3>
-                {planoAtivoId === "starter" && (
+                <h3 className="font-heading text-base font-bold text-slate-900">Essencial</h3>
+                {(planoAtivoId === "essencial" || planoAtivoId === "starter") && (
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
                     Plano Atual
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 mt-1">Para autônomos e microempresas</p>
+              <p className="text-xs text-slate-500 mt-1">Para autônomos e pequenas empresas</p>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-slate-900">R$ 119</span>
-                <span className="text-xs text-slate-400">/mês</span>
+                <span className="text-2xl font-bold text-slate-900">R$ 149</span>
+                <span className="text-xs text-slate-400">,00/mês</span>
               </div>
               <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Até 50 títulos ativos</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Disparo manual WhatsApp</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Régua preventiva (D-3 e D0)</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Suporte via e-mail</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Até 300 clientes cadastrados</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Até R$ 100k em recebíveis</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Pipeline Kanban completo</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Régua preventiva e reativa</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Aging List e DSO em tempo real</li>
               </ul>
             </div>
             <button
               type="button"
-              onClick={() => abrirCheckout(MERCADO_PAGO_PLANS.starter)}
-              className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl border border-sky-300 bg-sky-50 py-2.5 text-xs font-bold text-sky-700 hover:bg-sky-100 transition-colors shadow-sm"
+              onClick={() => abrirCheckout(MERCADO_PAGO_PLANS.essencial)}
+              className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 py-2.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors shadow-sm"
             >
               <CreditCard className="h-3.5 w-3.5" />
-              <span>{planoAtivoId === "starter" ? "Renovar via Mercado Pago" : "Migrar para Starter"}</span>
+              <span>{(planoAtivoId === "essencial" || planoAtivoId === "starter") ? "Renovar via Mercado Pago" : "Migrar para Essencial"}</span>
             </button>
           </div>
 
-          {/* Pro (Destaque) */}
+          {/* Profissional (Destaque) */}
           <div className={`relative rounded-2xl border-2 p-5 bg-gradient-to-b from-blue-50/50 to-white shadow-md flex flex-col justify-between transition-all ${
-            planoAtivoId === "pro" ? "border-blue-600 ring-2 ring-blue-600/20" : "border-blue-500"
+            planoAtivoId === "profissional" || planoAtivoId === "pro" ? "border-blue-600 ring-2 ring-blue-600/20" : "border-blue-500"
           }`}>
             <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider">
               Mais Popular
@@ -468,38 +469,38 @@ export default function Configuracoes() {
             <div>
               <div className="flex items-center justify-between">
                 <h3 className="font-heading text-base font-bold text-slate-900">Profissional</h3>
-                {planoAtivoId === "pro" && (
+                {(planoAtivoId === "profissional" || planoAtivoId === "pro") && (
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
                     Plano Atual
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 mt-1">Para pequenas e médias empresas</p>
+              <p className="text-xs text-slate-500 mt-1">Solução completa com IA e automação</p>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-slate-900">R$ 299</span>
-                <span className="text-xs text-slate-400">/mês</span>
+                <span className="text-2xl font-bold text-slate-900">R$ 349</span>
+                <span className="text-xs text-slate-400">,00/mês</span>
               </div>
               <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Até 300 títulos ativos</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Clientes e faturas ilimitadas</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> IA Financeira de diagnóstico</li>
                 <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Régua multietapas automática</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Relatórios de Aging detalhados</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Integração com Chave PIX</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Suporte prioritário WhatsApp</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Gestão de acordos e promessas</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Suporte prioritário via WhatsApp</li>
               </ul>
             </div>
             <button
               type="button"
-              onClick={() => abrirCheckout(MERCADO_PAGO_PLANS.pro)}
+              onClick={() => abrirCheckout(MERCADO_PAGO_PLANS.profissional)}
               className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white hover:bg-blue-700 shadow-sm shadow-blue-600/30 transition-all"
             >
               <CreditCard className="h-3.5 w-3.5" />
-              <span>{planoAtivoId === "pro" ? "Renovar via Mercado Pago" : "Migrar para Profissional"}</span>
+              <span>{(planoAtivoId === "profissional" || planoAtivoId === "pro") ? "Renovar via Mercado Pago" : "Migrar para Profissional"}</span>
             </button>
           </div>
 
           {/* Enterprise */}
           <div className={`rounded-2xl border p-5 bg-white flex flex-col justify-between transition-all ${
-            planoAtivoId === "enterprise" ? "border-blue-600 ring-2 ring-blue-600/20 shadow-md" : "border-slate-200"
+            planoAtivoId === "enterprise" ? "border-purple-600 ring-2 ring-purple-600/20 shadow-md" : "border-slate-200"
           }`}>
             <div>
               <div className="flex items-center justify-between">
@@ -510,23 +511,23 @@ export default function Configuracoes() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 mt-1">Para operações de grande volume</p>
+              <p className="text-xs text-slate-500 mt-1">Para médias e grandes operações</p>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-slate-900">R$ 699</span>
-                <span className="text-xs text-slate-400">/mês</span>
+                <span className="text-2xl font-bold text-slate-900">R$ 799</span>
+                <span className="text-xs text-slate-400">,00/mês</span>
               </div>
               <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Títulos ilimitados</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Múltiplos operadores e gerentes</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> API e Webhooks personalizados</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Emissão de Boletos e PIX com QR Code</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Gerente de contas dedicado</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-purple-600" /> Múltiplos usuários por equipe</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-purple-600" /> API aberta e Webhooks para ERPs</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-purple-600" /> IA para negociações complexas</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-purple-600" /> Onboarding dedicado da equipe</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-purple-600" /> Gerente de contas exclusivo</li>
               </ul>
             </div>
             <button
               type="button"
               onClick={() => abrirCheckout(MERCADO_PAGO_PLANS.enterprise)}
-              className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white hover:bg-slate-800 transition-colors shadow-sm"
+              className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl bg-purple-700 py-2.5 text-xs font-bold text-white hover:bg-purple-800 transition-colors shadow-sm"
             >
               <CreditCard className="h-3.5 w-3.5" />
               <span>{planoAtivoId === "enterprise" ? "Renovar via Mercado Pago" : "Migrar para Enterprise"}</span>

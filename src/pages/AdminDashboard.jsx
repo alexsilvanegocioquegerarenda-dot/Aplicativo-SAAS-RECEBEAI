@@ -31,8 +31,8 @@ const EMPRESAS_SAAS_INICIAIS = [
     responsavel: "Mariana Souza",
     email: "financeiro@techsolutions.com.br",
     telefone: "(11) 98765-4321",
-    plano: "pro", // R$ 299
-    valor_mensalidade: 299.0,
+    plano: "profissional", // R$ 349
+    valor_mensalidade: 349.0,
     status: "ativo",
     titulos_ativos: 48,
     data_adesao: "2024-01-10",
@@ -44,8 +44,8 @@ const EMPRESAS_SAAS_INICIAIS = [
     responsavel: "Patrícia Lima",
     email: "contas@alvoradaalimentos.com.br",
     telefone: "(19) 99123-4567",
-    plano: "enterprise", // R$ 699
-    valor_mensalidade: 699.0,
+    plano: "enterprise", // R$ 799
+    valor_mensalidade: 799.0,
     status: "ativo",
     titulos_ativos: 215,
     data_adesao: "2024-02-01",
@@ -57,8 +57,8 @@ const EMPRESAS_SAAS_INICIAIS = [
     responsavel: "Carlos Eduardo",
     email: "cobranca@autopecassaojose.com.br",
     telefone: "(11) 97654-3210",
-    plano: "starter", // R$ 119
-    valor_mensalidade: 119.0,
+    plano: "essencial", // R$ 149
+    valor_mensalidade: 149.0,
     status: "ativo",
     titulos_ativos: 28,
     data_adesao: "2024-01-15",
@@ -70,8 +70,8 @@ const EMPRESAS_SAAS_INICIAIS = [
     responsavel: "Rodrigo Mendes",
     email: "adm@saborrealbuffet.com.br",
     telefone: "(21) 98888-7777",
-    plano: "starter", // R$ 119
-    valor_mensalidade: 119.0,
+    plano: "essencial", // R$ 149
+    valor_mensalidade: 149.0,
     status: "ativo",
     titulos_ativos: 14,
     data_adesao: "2024-02-12",
@@ -83,8 +83,8 @@ const EMPRESAS_SAAS_INICIAIS = [
     responsavel: "Beatriz Nogueira",
     email: "financeiro@deltaestrategia.com.br",
     telefone: "(31) 97777-6666",
-    plano: "pro", // R$ 299
-    valor_mensalidade: 299.0,
+    plano: "profissional", // R$ 349
+    valor_mensalidade: 349.0,
     status: "ativo",
     titulos_ativos: 85,
     data_adesao: "2024-02-20",
@@ -96,8 +96,8 @@ const EMPRESAS_SAAS_INICIAIS = [
     responsavel: "Fernando Guimarães",
     email: "diretoria@rodonavelog.com.br",
     telefone: "(11) 99888-1122",
-    plano: "enterprise", // R$ 699
-    valor_mensalidade: 699.0,
+    plano: "enterprise", // R$ 799
+    valor_mensalidade: 799.0,
     status: "ativo",
     titulos_ativos: 340,
     data_adesao: "2024-03-01",
@@ -109,8 +109,8 @@ const EMPRESAS_SAAS_INICIAIS = [
     responsavel: "Marcos Vinicius",
     email: "contato@metalurgicaprogresso.com.br",
     telefone: "(47) 98765-1122",
-    plano: "pro", // R$ 299
-    valor_mensalidade: 299.0,
+    plano: "profissional", // R$ 349
+    valor_mensalidade: 349.0,
     status: "pendente", // Pendência de pagamento no Mercado Pago
     titulos_ativos: 32,
     data_adesao: "2024-03-05",
@@ -148,14 +148,20 @@ export default function AdminDashboard() {
 
   // Alteração manual de plano pelo administrador
   const handleMudarPlano = (empresaId, novoPlano) => {
-    const precos = { starter: 119.0, pro: 299.0, enterprise: 699.0 };
+    const precos = {
+      essencial: 149.0,
+      profissional: 349.0,
+      enterprise: 799.0,
+      starter: 149.0,
+      pro: 349.0,
+    };
     setEmpresas(
       empresas.map((e) =>
         e.id === empresaId
           ? {
               ...e,
               plano: novoPlano,
-              valor_mensalidade: precos[novoPlano] || 119.0,
+              valor_mensalidade: precos[novoPlano] || 149.0,
             }
           : e
       )
@@ -185,7 +191,9 @@ export default function AdminDashboard() {
   });
 
   const badgePlano = {
-    starter: "bg-slate-100 text-slate-800 border-slate-200",
+    essencial: "bg-emerald-50 text-emerald-800 border-emerald-200 font-bold",
+    starter: "bg-emerald-50 text-emerald-800 border-emerald-200 font-bold",
+    profissional: "bg-blue-50 text-blue-800 border-blue-200 font-bold",
     pro: "bg-blue-50 text-blue-800 border-blue-200 font-bold",
     enterprise: "bg-purple-50 text-purple-800 border-purple-200 font-bold",
   };
@@ -445,9 +453,9 @@ export default function AdminDashboard() {
 
             <div className="mt-5 space-y-3">
               {[
-                { id: "starter", nome: "Plano Starter", preco: "R$ 119/mês", desc: "Até 50 títulos" },
-                { id: "pro", nome: "Plano Profissional", preco: "R$ 299/mês", desc: "Até 300 títulos" },
-                { id: "enterprise", nome: "Plano Enterprise", preco: "R$ 699/mês", desc: "Títulos ilimitados" },
+                { id: "essencial", nome: "Plano Essencial", preco: "R$ 149/mês", desc: "Até 300 clientes e R$ 100k" },
+                { id: "profissional", nome: "Plano Profissional", preco: "R$ 349/mês", desc: "Ilimitado com IA e WhatsApp API" },
+                { id: "enterprise", nome: "Plano Enterprise", preco: "R$ 799/mês", desc: "Corporativo, multi-usuários e API" },
               ].map((p) => (
                 <button
                   key={p.id}

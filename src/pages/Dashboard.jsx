@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { formatCurrency, formatDate, daysBetween, getGreeting } from "@/lib/format";
+import { getGreeting, formatCurrency, formatDate, daysBetween } from "@/lib/format";
 import AgingTabela from "@/components/AgingTabela";
+import { getDSOPeriodos, calcularDSOPeriodo } from "@/lib/dso";
 import {
   Wallet,
   AlertTriangle,
@@ -14,7 +15,8 @@ import {
   Users,
   Receipt,
   Sparkles,
-  Calendar
+  Calendar,
+  Activity
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -93,6 +95,21 @@ export default function Dashboard() {
     .filter((c) => c.totalAtrasado > 0)
     .sort((a, b) => b.totalAtrasado - a.totalAtrasado);
 
+  // Cálculo do DSO da Carteira
+  const periodos = getDSOPeriodos();
+  const dsoStats = calcularDSOPeriodo(recebiveis, periodos[0]); // últimos 30 dias
+  const dsoDias = Math.round(dsoStats.dso || 0);
+
+  const getStatusDSO = (dias) => {
+    if (dias === 0) return { label: "Sem dados", cor: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" };
+    if (dias <= 30) return { label: "Excelente", cor: "text-emerald-700", bg: "bg-emerald-50/50", border: "border-emerald-200" };
+    if (dias <= 45) return { label: "Saudável", cor: "text-blue-700", bg: "bg-blue-50/50", border: "border-blue-200" };
+    if (dias <= 60) return { label: "Atenção", cor: "text-amber-700", bg: "bg-amber-50/50", border: "border-amber-200" };
+    return { label: "Crítico", cor: "text-rose-700", bg: "bg-rose-50/50", border: "border-rose-200" };
+  };
+
+  const statusDSO = getStatusDSO(dsoDias);
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 md:px-8">
       {/* Header com Saudações */}
@@ -102,7 +119,7 @@ export default function Dashboard() {
             {getGreeting()}, Financeiro! 👋
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Aqui está o panorama completo da carteira de recebíveis e cobranças hoje.
+            Aqui está o panorama completo da carteira de recebíveis, DSO e cobranças hoje.
           </p>
         </div>
 
@@ -124,8 +141,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Grid de KPIs Financeiros */}
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Grid de KPIs Financeiros com DSO */}
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {/* Total a Receber */}
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
@@ -185,7 +202,32 @@ export default function Dashboard() {
           <div className="mt-3">
             <div className="text-2xl font-bold tracking-tight text-slate-900">{taxaInadimplencia.toFixed(1)}%</div>
             <div className="mt-1 text-xs text-slate-500">
-              Índice sobre o volume total da carteira
+              Índice sobre a carteira
+            </div>
+          </div>
+        </div>
+
+        {/* DSO da Carteira */}
+        <div className={`relative overflow-hidden rounded-2xl border p-5 shadow-sm transition-all hover:shadow-md ${statusDSO.bg} ${statusDSO.border}`}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-indigo-700">DSO da Carteira</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-indigo-600 shadow-sm">
+              <Activity className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl font-bold tracking-tight text-slate-900">{dsoDias}</span>
+              <span className="text-xs font-semibold text-slate-600">dias</span>
+              <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-white border shadow-xs ${statusDSO.cor} ${statusDSO.border}`}>
+                {statusDSO.label}
+              </span>
+            </div>
+            <div className="mt-1 flex items-center justify-between text-xs">
+              <span className="text-slate-500">Prazo médio recebimento</span>
+              <Link to="/dso" className="font-bold text-indigo-600 hover:text-indigo-800 hover:underline">
+                Ver DSO &rarr;
+              </Link>
             </div>
           </div>
         </div>
@@ -200,9 +242,19 @@ export default function Dashboard() {
               <h2 className="font-heading text-lg font-bold text-slate-900">Aging Geral da Carteira</h2>
               <p className="text-xs text-slate-500">Distribuição dos valores por faixa de atraso temporal</p>
             </div>
-            <span className="rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-              Tempo Real
-            </span>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/dso"
+                title="Ver relatório analítico de DSO"
+                className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/80 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
+              >
+                <Activity className="h-3.5 w-3.5" />
+                <span>DSO: {dsoDias} dias</span>
+              </Link>
+              <span className="rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                Tempo Real
+              </span>
+            </div>
           </div>
 
           <AgingTabela recebiveisEnriched={recebiveisEnriched} />
