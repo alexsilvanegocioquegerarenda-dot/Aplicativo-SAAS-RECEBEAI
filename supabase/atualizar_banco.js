@@ -47,8 +47,17 @@ console.log("=================================================================="
 console.log(`📡 URL do Projeto : ${SUPABASE_URL}`);
 console.log(`🔑 Chave API     : ${SUPABASE_ANON_KEY.substring(0, 15)}... (Publishable/Anon)`);
 console.log("------------------------------------------------------------------");
+// Polyfill global WebSocket para ambientes Node.js < 22 (como Node 20 em CI/CD ou runners legados)
+if (typeof globalThis.WebSocket === "undefined") {
+  globalThis.WebSocket = class WebSocket {};
+}
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: false },
+  realtime: {
+    transport: globalThis.WebSocket,
+  },
+});
 
 const TABELAS = [
   { nome: "empresas", descricao: "Multi-tenancy / Dados das Empresas Assinantes" },
