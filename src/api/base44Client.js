@@ -1,345 +1,352 @@
-import { supabase, isSupabaseConfigured } from "./supabaseClient";
+import { supabase, isSupabaseConfigured } from "./supabaseClient.js";
 
 const STORAGE_KEY_PREFIX = "recebeai_data_";
 
 // Seed de dados iniciais realistas para demonstração e uso imediato
-const INITIAL_DATA = {
-  Cliente: [
-    {
-      id: "cli-1",
-      nome: "TechSolutions Informática Ltda",
-      cnpj: "34.123.456/0001-89",
-      email: "financeiro@techsolutions.com.br",
-      telefone: "11987654321",
-      contato_nome: "Mariana Souza",
-      status: "atrasado",
-      risco: "medio",
-      limite_credito: 25000,
-      criado_em: "2024-01-10",
-    },
-    {
-      id: "cli-2",
-      nome: "Auto Peças e Mecânica São José",
-      cnpj: "18.987.654/0001-23",
-      email: "cobranca@autopecassaojose.com.br",
-      telefone: "11976543210",
-      contato_nome: "Carlos Eduardo",
-      status: "atrasado",
-      risco: "alto",
-      limite_credito: 15000,
-      criado_em: "2024-01-15",
-    },
-    {
-      id: "cli-3",
-      nome: "Distribuidora de Alimentos Alvorada",
-      cnpj: "05.456.789/0001-12",
-      email: "contas@alvoradaalimentos.com.br",
-      telefone: "19991234567",
-      contato_nome: "Patrícia Lima",
-      status: "em_dia",
-      risco: "baixo",
-      limite_credito: 60000,
-      criado_em: "2024-02-01",
-    },
-    {
-      id: "cli-4",
-      nome: "Restaurante & Buffet Sabor Real",
-      cnpj: "22.333.444/0001-55",
-      email: "adm@saborrealbuffet.com.br",
-      telefone: "21988887777",
-      contato_nome: "Rodrigo Mendes",
-      status: "a_vencer",
-      risco: "medio",
-      limite_credito: 12000,
-      criado_em: "2024-02-12",
-    },
-    {
-      id: "cli-5",
-      nome: "Consultoria Delta Estratégia",
-      cnpj: "45.678.901/0001-77",
-      email: "financeiro@deltaestrategia.com.br",
-      telefone: "31977776666",
-      contato_nome: "Beatriz Nogueira",
-      status: "em_dia",
-      risco: "baixo",
-      limite_credito: 40000,
-      criado_em: "2024-02-20",
-    },
-  ],
+export function getFreshInitialData() {
+  const hoje = Date.now();
+  const formatYMD = (timestamp) => new Date(timestamp).toISOString().split("T")[0];
 
-  Recebivel: [
-    {
-      id: "rec-1",
-      cliente_id: "cli-1",
-      nota_fiscal: "NF-2024-101",
-      descricao: "Serviços de Manutenção Mensal e Licenças",
-      valor: 4500.0,
-      valor_pago: 0,
-      vencimento: new Date(Date.now() - 15 * 86400000).toISOString().split("T")[0], // 15 dias de atraso
-      status: "atrasado",
-      forma_pagamento: "boleto",
+  return {
+    Cliente: [
+      {
+        id: "cli-1",
+        nome: "TechSolutions Informática Ltda",
+        cnpj: "34.123.456/0001-89",
+        email: "financeiro@techsolutions.com.br",
+        telefone: "11987654321",
+        contato_nome: "Mariana Souza",
+        status: "atrasado",
+        risco: "medio",
+        limite_credito: 25000,
+        criado_em: "2024-01-10",
+      },
+      {
+        id: "cli-2",
+        nome: "Auto Peças e Mecânica São José",
+        cnpj: "18.987.654/0001-23",
+        email: "cobranca@autopecassaojose.com.br",
+        telefone: "11976543210",
+        contato_nome: "Carlos Eduardo",
+        status: "atrasado",
+        risco: "alto",
+        limite_credito: 15000,
+        criado_em: "2024-01-15",
+      },
+      {
+        id: "cli-3",
+        nome: "Distribuidora de Alimentos Alvorada",
+        cnpj: "05.456.789/0001-12",
+        email: "contas@alvoradaalimentos.com.br",
+        telefone: "19991234567",
+        contato_nome: "Patrícia Lima",
+        status: "em_dia",
+        risco: "baixo",
+        limite_credito: 60000,
+        criado_em: "2024-02-01",
+      },
+      {
+        id: "cli-4",
+        nome: "Restaurante & Buffet Sabor Real",
+        cnpj: "22.333.444/0001-55",
+        email: "adm@saborrealbuffet.com.br",
+        telefone: "21988887777",
+        contato_nome: "Rodrigo Mendes",
+        status: "a_vencer",
+        risco: "medio",
+        limite_credito: 12000,
+        criado_em: "2024-02-12",
+      },
+      {
+        id: "cli-5",
+        nome: "Consultoria Delta Estratégia",
+        cnpj: "45.678.901/0001-77",
+        email: "financeiro@deltaestrategia.com.br",
+        telefone: "31977776666",
+        contato_nome: "Beatriz Nogueira",
+        status: "em_dia",
+        risco: "baixo",
+        limite_credito: 40000,
+        criado_em: "2024-02-20",
+      },
+    ],
+
+    Recebivel: [
+      {
+        id: "rec-1",
+        cliente_id: "cli-1",
+        nota_fiscal: "NF-2024-101",
+        descricao: "Serviços de Manutenção Mensal e Licenças",
+        valor: 4500.0,
+        valor_pago: 0,
+        vencimento: formatYMD(hoje - 15 * 86400000), // 15 dias de atraso (Aging até 30 dias)
+        status: "atrasado",
+        forma_pagamento: "boleto",
+        chave_pix: "pix@recebeai.com.br",
+      },
+      {
+        id: "rec-2",
+        cliente_id: "cli-1",
+        nota_fiscal: "NF-2024-102",
+        descricao: "Consultoria em Nuvem - Etapa 2",
+        valor: 3200.0,
+        valor_pago: 0,
+        vencimento: formatYMD(hoje + 5 * 86400000), // A vencer em 5 dias
+        status: "a_vencer",
+        forma_pagamento: "pix",
+      },
+      {
+        id: "rec-3",
+        cliente_id: "cli-2",
+        nota_fiscal: "NF-2024-089",
+        descricao: "Lote de Peças e Filtros Industriais",
+        valor: 8900.0,
+        valor_pago: 0,
+        vencimento: formatYMD(hoje - 42 * 86400000), // 42 dias atraso (Aging 31-60 dias)
+        status: "atrasado",
+        forma_pagamento: "boleto",
+      },
+      {
+        id: "rec-4",
+        cliente_id: "cli-2",
+        nota_fiscal: "NF-2024-094",
+        descricao: "Frete Especial e Acessórios",
+        valor: 1650.0,
+        valor_pago: 0,
+        vencimento: formatYMD(hoje - 65 * 86400000), // 65 dias atraso (Aging 61-90 dias)
+        status: "atrasado",
+        forma_pagamento: "boleto",
+      },
+      {
+        id: "rec-5",
+        cliente_id: "cli-3",
+        nota_fiscal: "NF-2024-110",
+        descricao: "Fornecimento de Insumos - Parcela 1/2",
+        valor: 12500.0,
+        valor_pago: 12500.0,
+        vencimento: formatYMD(hoje - 10 * 86400000),
+        status: "pago",
+        data_pagamento: formatYMD(hoje - 11 * 86400000),
+        forma_pagamento: "pix",
+      },
+      {
+        id: "rec-6",
+        cliente_id: "cli-3",
+        nota_fiscal: "NF-2024-111",
+        descricao: "Fornecimento de Insumos - Parcela 2/2",
+        valor: 12500.0,
+        valor_pago: 0,
+        vencimento: formatYMD(hoje + 18 * 86400000),
+        status: "em_dia",
+        forma_pagamento: "pix",
+      },
+      {
+        id: "rec-7",
+        cliente_id: "cli-4",
+        nota_fiscal: "NF-2024-115",
+        descricao: "Serviço de Coquetel e Equipamentos",
+        valor: 2800.0,
+        valor_pago: 0,
+        vencimento: formatYMD(hoje + 2 * 86400000), // A vencer em 2 dias
+        status: "a_vencer",
+        forma_pagamento: "pix",
+      },
+      {
+        id: "rec-8",
+        cliente_id: "cli-5",
+        nota_fiscal: "NF-2024-120",
+        descricao: "Honorários Mensais de Assessoria",
+        valor: 5000.0,
+        valor_pago: 0,
+        vencimento: formatYMD(hoje + 25 * 86400000),
+        status: "em_dia",
+        forma_pagamento: "boleto",
+      },
+    ],
+
+    Cobranca: [
+      {
+        id: "cob-1",
+        cliente_id: "cli-1",
+        recebivel_id: "rec-1",
+        tipo: "whatsapp",
+        origem: "regua",
+        regua_step: 2,
+        status: "entregue",
+        data_envio: formatYMD(hoje - 3 * 86400000),
+        mensagem: "Olá Mariana, identificamos a pendência da NF-2024-101 no valor de R$ 4.500,00 vencida há 12 dias. Acesse o link ou use a chave PIX para quitar.",
+      },
+      {
+        id: "cob-2",
+        cliente_id: "cli-2",
+        recebivel_id: "rec-3",
+        tipo: "whatsapp",
+        origem: "manual",
+        regua_step: null,
+        status: "visualizada",
+        data_envio: formatYMD(hoje - 1 * 86400000),
+        mensagem: "Prezado Carlos, precisamos alinhar o pagamento referente ao título NF-2024-089 no valor de R$ 8.900,00. Estamos abertos a negociar um parcelamento.",
+      },
+    ],
+
+    Promessa: [
+      {
+        id: "prom-1",
+        cliente_id: "cli-1",
+        recebivel_id: "rec-1",
+        valor_acordado: 4500.0,
+        data_promessa: formatYMD(hoje + 4 * 86400000),
+        status: "pendente",
+        observacao: "Cliente afirmou que receberá repasse de cliente na quinta-feira e fará o PIX.",
+        criado_em: formatYMD(hoje),
+      },
+    ],
+
+    PrioridadeCobranca: [
+      {
+        id: "prio-1",
+        cliente_id: "cli-2",
+        score: 88,
+        nivel: "alta",
+        motivo: "Atraso superior a 40 dias com valor expressivo (> R$ 10.000 acumulado) e risco cadastral alto.",
+        recomendacao: "Entrar em contato via telefone ou WhatsApp propondo acordo com entrada de 30% via PIX.",
+      },
+      {
+        id: "prio-2",
+        cliente_id: "cli-1",
+        score: 65,
+        nivel: "media",
+        motivo: "Primeiro atraso relevante (15 dias). Cliente costuma pagar em dia.",
+        recomendacao: "Cobrança amigável via WhatsApp confirmando a promessa de pagamento registrada.",
+      },
+    ],
+
+    Regua: [
+      {
+        id: "reg-1",
+        nome: "Lembrete Preventivo (D-3)",
+        dias_gatilho: -3,
+        canal: "whatsapp",
+        ativo: true,
+        mensagem: "Olá {{cliente}}, tudo bem? Lembramos que sua fatura {{nota_fiscal}} no valor de {{valor}} vence em {{vencimento}}. Pague via PIX: {{chave_pix}}",
+      },
+      {
+        id: "reg-2",
+        nome: "Aviso no Vencimento (D0)",
+        dias_gatilho: 0,
+        canal: "whatsapp",
+        ativo: true,
+        mensagem: "Olá {{cliente}}! Sua fatura {{nota_fiscal}} de {{valor}} vence hoje. Evite juros e encargos pagando agora: {{link_pagamento}}",
+      },
+      {
+        id: "reg-3",
+        nome: "Cobrança Amigável (D+3)",
+        dias_gatilho: 3,
+        canal: "whatsapp",
+        ativo: true,
+        mensagem: "Olá {{cliente}}, não identificamos a compensação da sua fatura {{nota_fiscal}} ({{valor}}), vencida em {{vencimento}}. Caso já tenha pago, por favor desconsidere!",
+      },
+      {
+        id: "reg-4",
+        nome: "Cobrança Incisiva (D+10)",
+        dias_gatilho: 10,
+        canal: "whatsapp",
+        ativo: true,
+        mensagem: "Aviso importante: Sua fatura {{nota_fiscal}} encontra-se com 10 dias de atraso. Regularize sua situação para evitar bloqueios. Chave PIX: {{chave_pix}}",
+      },
+    ],
+
+    Importacao: [
+      {
+        id: "imp-1",
+        origem: "csv",
+        nome_arquivo: "faturas_janeiro_2024.csv",
+        quantidade_registros: 45,
+        valor_total: 184500.0,
+        status: "concluida",
+        created_date: new Date(hoje - 30 * 86400000).toISOString(),
+      },
+      {
+        id: "imp-2",
+        origem: "csv",
+        nome_arquivo: "remessa_bancaria_fev.csv",
+        quantidade_registros: 28,
+        valor_total: 92300.0,
+        status: "concluida",
+        created_date: new Date(hoje - 10 * 86400000).toISOString(),
+      },
+    ],
+
+    MetaRecuperacao: [
+      {
+        id: "meta-1",
+        periodo_inicio: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`,
+        periodo_fim: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}`,
+        valor_meta: 35000.0,
+        descricao: `Meta de Recuperação ${new Date().toLocaleDateString("pt-BR", { month: "long" })}`,
+        created_date: new Date().toISOString(),
+      },
+    ],
+
+    TemplateMensagem: [
+      {
+        id: "tpl-1",
+        nome: "Lembrete Amigável - Baixa Prioridade",
+        nivel: "baixa",
+        tom: "Amigável e preventivo",
+        conteudo: "Olá, {cliente}! Notamos que a fatura {nota_fiscal} no valor de {valor} venceu recentemente há {dias} dias. Segue nossa chave PIX para quitação facilitada: {pix}. Caso já tenha efetuado o pagamento, por favor desconsidere este aviso.",
+        ativo: true,
+      },
+      {
+        id: "tpl-2",
+        nome: "Cobrança Regular - Média Prioridade",
+        nivel: "media",
+        tom: "Educado, formal e persistente",
+        conteudo: "Prezado(a) {cliente}, constatamos uma pendência financeira referente à fatura {nota_fiscal}, vencida há {dias} dias no total de {valor}. Solicitamos a gentileza de regularizar a situação hoje mesmo para manter sua conta e limite ativos. Chave PIX: {pix}",
+        ativo: true,
+      },
+      {
+        id: "tpl-3",
+        nome: "Aviso Urgente - Alta Prioridade",
+        nivel: "alta",
+        tom: "Firme, assertivo com impacto",
+        conteudo: "URGENTE: {cliente}, o título {nota_fiscal} ({valor}) encontra-se em atraso grave de {dias} dias. Para evitar protesto em cartório e bloqueio comercial imediato, entre em contato imediatamente ou realize a liquidação via PIX: {pix}.",
+        ativo: true,
+      },
+    ],
+
+    ConversaIA: [
+      {
+        id: "conv-1",
+        pergunta: "Quem devo cobrar hoje?",
+        resposta: "Analisando sua carteira, recomendo focar hoje nos clientes com maior saldo vencido: Auto Peças e Mecânica São José (R$ 8.900,00 atrasado há mais de 40 dias) e TechSolutions Informática (R$ 4.500,00 atrasado há 15 dias). Ambos têm histórico crítico e necessitam de ação via WhatsApp hoje mesmo.",
+        created_date: new Date(hoje - 3600000).toISOString(),
+      },
+    ],
+
+    Configuracao: {
+      razao_social: "RecebeAi Cobranças & Tecnologia S.A.",
+      cnpj: "42.000.111/0001-99",
+      telefone_empresa: "11988889999",
+      email_cobranca: "financeiro@recebeai.com.br",
       chave_pix: "pix@recebeai.com.br",
+      tipo_chave_pix: "email",
+      multa_percentual: 2.0,
+      juros_mes_percentual: 1.0,
+      plano_atual: "profissional",
+      limite_titulos: 2000,
+      mp_public_key: "",
+      mp_access_token: "",
+      mp_link_essencial: "",
+      mp_link_profissional: "",
+      mp_link_enterprise: "",
+      mp_link_starter: "",
+      mp_link_pro: "",
     },
-    {
-      id: "rec-2",
-      cliente_id: "cli-1",
-      nota_fiscal: "NF-2024-102",
-      descricao: "Consultoria em Nuvem - Etapa 2",
-      valor: 3200.0,
-      valor_pago: 0,
-      vencimento: new Date(Date.now() + 5 * 86400000).toISOString().split("T")[0], // A vencer em 5 dias
-      status: "a_vencer",
-      forma_pagamento: "pix",
-    },
-    {
-      id: "rec-3",
-      cliente_id: "cli-2",
-      nota_fiscal: "NF-2024-089",
-      descricao: "Lote de Peças e Filtros Industriais",
-      valor: 8900.0,
-      valor_pago: 0,
-      vencimento: new Date(Date.now() - 42 * 86400000).toISOString().split("T")[0], // 42 dias atraso
-      status: "atrasado",
-      forma_pagamento: "boleto",
-    },
-    {
-      id: "rec-4",
-      cliente_id: "cli-2",
-      nota_fiscal: "NF-2024-094",
-      descricao: "Frete Especial e Acessórios",
-      valor: 1650.0,
-      valor_pago: 0,
-      vencimento: new Date(Date.now() - 65 * 86400000).toISOString().split("T")[0], // 65 dias atraso
-      status: "atrasado",
-      forma_pagamento: "boleto",
-    },
-    {
-      id: "rec-5",
-      cliente_id: "cli-3",
-      nota_fiscal: "NF-2024-110",
-      descricao: "Fornecimento de Insumos - Parcela 1/2",
-      valor: 12500.0,
-      valor_pago: 12500.0,
-      vencimento: new Date(Date.now() - 10 * 86400000).toISOString().split("T")[0],
-      status: "pago",
-      data_pagamento: new Date(Date.now() - 11 * 86400000).toISOString().split("T")[0],
-      forma_pagamento: "pix",
-    },
-    {
-      id: "rec-6",
-      cliente_id: "cli-3",
-      nota_fiscal: "NF-2024-111",
-      descricao: "Fornecimento de Insumos - Parcela 2/2",
-      valor: 12500.0,
-      valor_pago: 0,
-      vencimento: new Date(Date.now() + 18 * 86400000).toISOString().split("T")[0],
-      status: "em_dia",
-      forma_pagamento: "pix",
-    },
-    {
-      id: "rec-7",
-      cliente_id: "cli-4",
-      nota_fiscal: "NF-2024-115",
-      descricao: "Serviço de Coquetel e Equipamentos",
-      valor: 2800.0,
-      valor_pago: 0,
-      vencimento: new Date(Date.now() + 2 * 86400000).toISOString().split("T")[0], // A vencer em 2 dias
-      status: "a_vencer",
-      forma_pagamento: "pix",
-    },
-    {
-      id: "rec-8",
-      cliente_id: "cli-5",
-      nota_fiscal: "NF-2024-120",
-      descricao: "Honorários Mensais de Assessoria",
-      valor: 5000.0,
-      valor_pago: 0,
-      vencimento: new Date(Date.now() + 25 * 86400000).toISOString().split("T")[0],
-      status: "em_dia",
-      forma_pagamento: "boleto",
-    },
-  ],
+  };
+}
 
-  Cobranca: [
-    {
-      id: "cob-1",
-      cliente_id: "cli-1",
-      recebivel_id: "rec-1",
-      tipo: "whatsapp",
-      origem: "regua",
-      regua_step: 2,
-      status: "entregue",
-      data_envio: new Date(Date.now() - 3 * 86400000).toISOString().split("T")[0],
-      mensagem: "Olá Mariana, identificamos a pendência da NF-2024-101 no valor de R$ 4.500,00 vencida há 12 dias. Acesse o link ou use a chave PIX para quitar.",
-    },
-    {
-      id: "cob-2",
-      cliente_id: "cli-2",
-      recebivel_id: "rec-3",
-      tipo: "whatsapp",
-      origem: "manual",
-      regua_step: null,
-      status: "visualizada",
-      data_envio: new Date(Date.now() - 1 * 86400000).toISOString().split("T")[0],
-      mensagem: "Prezado Carlos, precisamos alinhar o pagamento referente ao título NF-2024-089 no valor de R$ 8.900,00. Estamos abertos a negociar um parcelamento.",
-    },
-  ],
-
-  Promessa: [
-    {
-      id: "prom-1",
-      cliente_id: "cli-1",
-      recebivel_id: "rec-1",
-      valor_acordado: 4500.0,
-      data_promessa: new Date(Date.now() + 4 * 86400000).toISOString().split("T")[0],
-      status: "pendente",
-      observacao: "Cliente afirmou que receberá repasse de cliente na quinta-feira e fará o PIX.",
-      criado_em: new Date().toISOString().split("T")[0],
-    },
-  ],
-
-  PrioridadeCobranca: [
-    {
-      id: "prio-1",
-      cliente_id: "cli-2",
-      score: 88,
-      nivel: "alta",
-      motivo: "Atraso superior a 40 dias com valor expressivo (> R$ 10.000 acumulado) e risco cadastral alto.",
-      recomendacao: "Entrar em contato via telefone ou WhatsApp propondo acordo com entrada de 30% via PIX.",
-    },
-    {
-      id: "prio-2",
-      cliente_id: "cli-1",
-      score: 65,
-      nivel: "media",
-      motivo: "Primeiro atraso relevante (15 dias). Cliente costuma pagar em dia.",
-      recomendacao: "Cobrança amigável via WhatsApp confirmando a promessa de pagamento registrada.",
-    },
-  ],
-
-  Regua: [
-    {
-      id: "reg-1",
-      nome: "Lembrete Preventivo (D-3)",
-      dias_gatilho: -3,
-      canal: "whatsapp",
-      ativo: true,
-      mensagem: "Olá {{cliente}}, tudo bem? Lembramos que sua fatura {{nota_fiscal}} no valor de {{valor}} vence em {{vencimento}}. Pague via PIX: {{chave_pix}}",
-    },
-    {
-      id: "reg-2",
-      nome: "Aviso no Vencimento (D0)",
-      dias_gatilho: 0,
-      canal: "whatsapp",
-      ativo: true,
-      mensagem: "Olá {{cliente}}! Sua fatura {{nota_fiscal}} de {{valor}} vence hoje. Evite juros e encargos pagando agora: {{link_pagamento}}",
-    },
-    {
-      id: "reg-3",
-      nome: "Cobrança Amigável (D+3)",
-      dias_gatilho: 3,
-      canal: "whatsapp",
-      ativo: true,
-      mensagem: "Olá {{cliente}}, não identificamos a compensação da sua fatura {{nota_fiscal}} ({{valor}}), vencida em {{vencimento}}. Caso já tenha pago, por favor desconsidere!",
-    },
-    {
-      id: "reg-4",
-      nome: "Cobrança Incisiva (D+10)",
-      dias_gatilho: 10,
-      canal: "whatsapp",
-      ativo: true,
-      mensagem: "Aviso importante: Sua fatura {{nota_fiscal}} encontra-se com 10 dias de atraso. Regularize sua situação para evitar bloqueios. Chave PIX: {{chave_pix}}",
-    },
-  ],
-
-  Importacao: [
-    {
-      id: "imp-1",
-      origem: "csv",
-      nome_arquivo: "faturas_janeiro_2024.csv",
-      quantidade_registros: 45,
-      valor_total: 184500.0,
-      status: "concluida",
-      created_date: new Date(Date.now() - 30 * 86400000).toISOString(),
-    },
-    {
-      id: "imp-2",
-      origem: "csv",
-      nome_arquivo: "remessa_bancaria_fev.csv",
-      quantidade_registros: 28,
-      valor_total: 92300.0,
-      status: "concluida",
-      created_date: new Date(Date.now() - 10 * 86400000).toISOString(),
-    },
-  ],
-
-  MetaRecuperacao: [
-    {
-      id: "meta-1",
-      periodo_inicio: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`,
-      periodo_fim: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()}`,
-      valor_meta: 35000.0,
-      descricao: `Meta de Recuperação ${new Date().toLocaleDateString("pt-BR", { month: "long" })}`,
-      created_date: new Date().toISOString(),
-    },
-  ],
-
-  TemplateMensagem: [
-    {
-      id: "tpl-1",
-      nome: "Lembrete Amigável - Baixa Prioridade",
-      nivel: "baixa",
-      tom: "Amigável e preventivo",
-      conteudo: "Olá, {cliente}! Notamos que a fatura {nota_fiscal} no valor de {valor} venceu recentemente há {dias} dias. Segue nossa chave PIX para quitação facilitada: {pix}. Caso já tenha efetuado o pagamento, por favor desconsidere este aviso.",
-      ativo: true,
-    },
-    {
-      id: "tpl-2",
-      nome: "Cobrança Regular - Média Prioridade",
-      nivel: "media",
-      tom: "Educado, formal e persistente",
-      conteudo: "Prezado(a) {cliente}, constatamos uma pendência financeira referente à fatura {nota_fiscal}, vencida há {dias} dias no total de {valor}. Solicitamos a gentileza de regularizar a situação hoje mesmo para manter sua conta e limite ativos. Chave PIX: {pix}",
-      ativo: true,
-    },
-    {
-      id: "tpl-3",
-      nome: "Aviso Urgente - Alta Prioridade",
-      nivel: "alta",
-      tom: "Firme, assertivo com impacto",
-      conteudo: "URGENTE: {cliente}, o título {nota_fiscal} ({valor}) encontra-se em atraso grave de {dias} dias. Para evitar protesto em cartório e bloqueio comercial imediato, entre em contato imediatamente ou realize a liquidação via PIX: {pix}.",
-      ativo: true,
-    },
-  ],
-
-  ConversaIA: [
-    {
-      id: "conv-1",
-      pergunta: "Quem devo cobrar hoje?",
-      resposta: "Analisando sua carteira, recomendo focar hoje nos clientes com maior saldo vencido: Auto Peças e Mecânica São José (R$ 8.900,00 atrasado há mais de 40 dias) e TechSolutions Informática (R$ 4.500,00 atrasado há 15 dias). Ambos têm histórico crítico e necessitam de ação via WhatsApp hoje mesmo.",
-      created_date: new Date(Date.now() - 3600000).toISOString(),
-    },
-  ],
-
-  Configuracao: {
-    razao_social: "RecebeAi Cobranças & Tecnologia S.A.",
-    cnpj: "42.000.111/0001-99",
-    telefone_empresa: "11988889999",
-    email_cobranca: "financeiro@recebeai.com.br",
-    chave_pix: "pix@recebeai.com.br",
-    tipo_chave_pix: "email",
-    multa_percentual: 2.0,
-    juros_mes_percentual: 1.0,
-    plano_atual: "profissional", // 'essencial' | 'profissional' | 'enterprise'
-    limite_titulos: 2000,
-    mp_public_key: "",
-    mp_access_token: "",
-    mp_link_essencial: "",
-    mp_link_profissional: "",
-    mp_link_enterprise: "",
-    mp_link_starter: "",
-    mp_link_pro: "",
-  },
-};
+export const INITIAL_DATA = getFreshInitialData();
 
 function getActiveTenantId() {
   try {
@@ -355,21 +362,39 @@ function getActiveTenantId() {
 function getLocalData(entityName) {
   const tenantId = getActiveTenantId();
   const storageKey = `${STORAGE_KEY_PREFIX}${tenantId}_${entityName}`;
+  const freshData = getFreshInitialData();
+
   try {
     const raw = localStorage.getItem(storageKey);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      // Se for array e contiver dados válidos, retorna os dados
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+      // Se for objeto de configuração com propriedades
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && Object.keys(parsed).length > 0) {
+        return parsed;
+      }
     }
   } catch (e) {
     console.warn("Erro ao ler localStorage multi-tenant:", e);
   }
 
-  // Apenas as contas de demonstração iniciam com dados pré-populados
-  const isDemoTenant =
-    tenantId === "emp-demo-techsolutions" ||
-    tenantId === "emp-master-recebeai";
+  // Tenta recuperar da chave legada sem tenant (ex: recebeai_data_Cliente)
+  try {
+    const legacyRaw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${entityName}`);
+    if (legacyRaw) {
+      const legacyParsed = JSON.parse(legacyRaw);
+      if (Array.isArray(legacyParsed) && legacyParsed.length > 0) {
+        setLocalData(entityName, legacyParsed);
+        return legacyParsed;
+      }
+    }
+  } catch (e) {}
 
-  const defaultData = isDemoTenant ? INITIAL_DATA[entityName] || [] : [];
+  // Se estiver vazio (array vazio ou chave inexistente), carrega e salva os dados fictícios iniciais
+  const defaultData = freshData[entityName] || [];
   setLocalData(entityName, defaultData);
   return defaultData;
 }
@@ -450,7 +475,7 @@ function createEntityClient(entityName) {
             query = query.eq(key, value);
           });
           const { data, error } = await query;
-          if (!error && data) {
+          if (!error && data && data.length > 0) {
             return data;
           }
         } catch (e) {
@@ -459,7 +484,7 @@ function createEntityClient(entityName) {
       }
 
       const items = getLocalData(entityName);
-      return items.filter(item => {
+      return items.filter((item) => {
         return Object.entries(criteria).every(([key, value]) => {
           return String(item[key]) === String(value);
         });
@@ -468,22 +493,25 @@ function createEntityClient(entityName) {
 
     async get(id) {
       if (isSupabaseConfigured && tableName) {
-        try {
-          const { data, error } = await supabase
-            .from(tableName)
-            .select("*")
-            .eq("id", id)
-            .maybeSingle();
-          if (!error && data) {
-            return data;
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        if (isUuid) {
+          try {
+            const { data, error } = await supabase
+              .from(tableName)
+              .select("*")
+              .eq("id", id)
+              .maybeSingle();
+            if (!error && data) {
+              return data;
+            }
+          } catch (e) {
+            console.warn(`[Supabase] Erro ao buscar ${entityName}:`, e);
           }
-        } catch (e) {
-          console.warn(`[Supabase] Erro ao buscar ${entityName}:`, e);
         }
       }
 
       const items = getLocalData(entityName);
-      return items.find(x => x.id === id) || null;
+      return items.find((x) => String(x.id) === String(id)) || null;
     },
 
     async create(data) {
@@ -923,8 +951,12 @@ export const base44 = {
   },
 
   resetDemoData() {
-    Object.keys(INITIAL_DATA).forEach((k) => {
-      setLocalData(k, INITIAL_DATA[k]);
+    const freshData = getFreshInitialData();
+    Object.keys(freshData).forEach((k) => {
+      setLocalData(k, freshData[k]);
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}${k}`, JSON.stringify(freshData[k]));
+      } catch (e) {}
     });
   },
 

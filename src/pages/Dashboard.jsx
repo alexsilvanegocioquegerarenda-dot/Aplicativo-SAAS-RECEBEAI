@@ -27,14 +27,25 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
-      const [c, r, p] = await Promise.all([
+      let [c, r, p] = await Promise.all([
         base44.entities.Cliente.list(),
         base44.entities.Recebivel.list(),
         base44.entities.Promessa.list(),
       ]);
-      setClientes(c);
-      setRecebiveis(r);
-      setPromessas(p);
+
+      // Se a carteira estiver vazia, restaura automaticamente os dados de demonstração
+      if ((!c || c.length === 0) && (!r || r.length === 0)) {
+        base44.resetDemoData();
+        [c, r, p] = await Promise.all([
+          base44.entities.Cliente.list(),
+          base44.entities.Recebivel.list(),
+          base44.entities.Promessa.list(),
+        ]);
+      }
+
+      setClientes(c || []);
+      setRecebiveis(r || []);
+      setPromessas(p || []);
     } finally {
       setLoading(false);
     }
@@ -172,6 +183,17 @@ export default function Dashboard() {
         </div>
 
         <div className="flex flex-wrap gap-2.5">
+          <button
+            onClick={() => {
+              base44.resetDemoData();
+              loadData();
+            }}
+            title="Recarrega clientes, recebíveis e réguas com cálculos atualizados"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50/90 px-3.5 py-2.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition-colors shadow-sm"
+          >
+            <Sparkles className="h-4 w-4 text-amber-600" />
+            <span>Restaurar Dados Demo</span>
+          </button>
           <Link
             to="/cobrancas"
             className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm shadow-blue-600/20 hover:bg-blue-700 transition-colors"

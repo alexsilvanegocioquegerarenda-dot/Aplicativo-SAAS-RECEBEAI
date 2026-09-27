@@ -319,6 +319,18 @@ export default function Layout({ children }) {
               </div>
             )}
 
+            <button
+              onClick={() => {
+                base44.resetDemoData();
+                window.location.reload();
+              }}
+              title="Restaurar dados fictícios completos da carteira de cobrança"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-sm"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+              <span className="hidden md:inline">Restaurar Dados Demo</span>
+            </button>
+
             <Link
               to="/recebiveis"
               className="hidden sm:inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-700 shadow-sm shadow-blue-500/20 transition-colors"

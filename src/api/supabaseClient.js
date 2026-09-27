@@ -4,8 +4,20 @@ import { createClient } from '@supabase/supabase-js';
 const DEFAULT_SUPABASE_URL = "https://upuuqfojhqjgzsdycvxp.supabase.co";
 const DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_kT4M2GSyV2p0lY1ZRN6R5w_P85qxBAV";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
+// Polyfill global WebSocket para ambientes sem WebSocket nativo (ex: Node < 22)
+if (typeof globalThis.WebSocket === "undefined") {
+  globalThis.WebSocket = class WebSocket {};
+}
+
+const env =
+  typeof import.meta !== "undefined" && import.meta.env
+    ? import.meta.env
+    : typeof process !== "undefined" && process.env
+    ? process.env
+    : {};
+
+const supabaseUrl = env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl &&
@@ -15,10 +27,17 @@ export const isSupabaseConfigured = Boolean(
   !supabaseUrl.includes("placeholder-project")
 );
 
+const clientOptions = {
+  auth: { persistSession: true },
+  realtime: {
+    transport: globalThis.WebSocket,
+  },
+};
+
 // Inicializa o cliente Supabase conectado à nuvem
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : createClient("https://placeholder-project.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder");
+  ? createClient(supabaseUrl, supabaseAnonKey, clientOptions)
+  : createClient("https://placeholder-project.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder", clientOptions);
 
 /**
  * Testa a conectividade real com a nuvem Supabase em tempo de execução
