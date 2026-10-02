@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { useAuth, DEFAULT_USERS } from "@/context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import {
   Zap,
   Lock,
@@ -18,7 +18,7 @@ import {
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, alternarPerfilDemonstracao } = useAuth();
+  const { login, alternarPerfilDemonstracao, authError, clearAuthError } = useAuth();
 
   const [tipoLogin, setTipoLogin] = useState("empresa"); // 'empresa' | 'admin'
   const [email, setEmail] = useState("");
@@ -27,6 +27,10 @@ export default function Login() {
   const [carregando, setCarregando] = useState(false);
 
   const from = location.state?.from?.pathname || "/dashboard";
+
+  useEffect(() => {
+    if (authError) setErro(authError);
+  }, [authError]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,17 +51,22 @@ export default function Login() {
           navigate(from === "/login" || from === "/" ? "/dashboard" : from);
         }
       } else {
-        setErro("Credenciais inválidas. Verifique seu e-mail e senha.");
+        setErro(res.message || "Não foi possível autenticar. Verifique seus dados e tente novamente.");
       }
     } catch (err) {
-      setErro("Erro ao realizar login. Tente novamente.");
+      setErro(err.message || "Erro ao realizar login. Tente novamente.");
     } finally {
       setCarregando(false);
     }
   };
 
-  const handleEntrarComoDemo = (tipo) => {
-    alternarPerfilDemonstracao(tipo);
+  const handleEntrarComoDemo = async (tipo) => {
+    clearAuthError();
+    const result = await alternarPerfilDemonstracao(tipo);
+    if (!result.success) {
+      setErro(result.message || "Não foi possível abrir a demonstração.");
+      return;
+    }
     if (tipo === "admin") {
       navigate("/admin");
     } else {
@@ -118,8 +127,9 @@ export default function Login() {
               onClick={() => {
                 setTipoLogin("admin");
                 setEmail("admin@recebeai.com.br");
-                setPassword("admin123");
+                setPassword("");
                 setErro("");
+                clearAuthError();
               }}
               className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
                 tipoLogin === "admin"
@@ -166,8 +176,8 @@ export default function Login() {
                 <label className="block text-xs font-semibold text-slate-300">
                   Senha
                 </label>
-                <span className="text-[11px] text-slate-400 hover:text-emerald-400 cursor-pointer">
-                  Esqueceu a senha?
+                <span className="text-[11px] text-slate-500">
+                  Recuperação de senha em breve
                 </span>
               </div>
               <div className="relative">

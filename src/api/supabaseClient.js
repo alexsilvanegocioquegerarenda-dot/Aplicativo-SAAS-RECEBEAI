@@ -44,20 +44,53 @@ export const supabase = isSupabaseConfigured
  */
 export async function testarConexaoSupabase() {
   if (!isSupabaseConfigured) {
-    return { ok: false, mensagem: "Credenciais do Supabase não configuradas." };
+    return { ok: false, status: "not_configured", mensagem: "Credenciais do Supabase não configuradas." };
   }
 
   const inicio = performance.now();
   try {
+    const { data: authData, error: authError } = await supabase.auth.getSession();
+    if (authError || !authData?.session) {
+      return {
+        ok: false,
+        status: "permission_error",
+        mensagem: authError?.message || "Nenhuma sessão autenticada do Supabase está ativa.",
+        duracao: Math.round(performance.now() - inicio),
+      };
+    }
+
+    const { data: empresa, error: empresaError } = await supabase
+      .from("empresas")
+      .select("id")
+      .eq("user_id", authData.session.user.id)
+      .maybeSingle();
+
+    if (empresaError || !empresa) {
+      const permissionError = !empresaError || ["42501", "PGRST301", "401", "403"].includes(String(empresaError.code || empresaError.status));
+      return {
+        ok: false,
+        status: permissionError ? "permission_error" : "connection_error",
+        mensagem: empresaError?.message || "A sessão não está vinculada a uma empresa no Supabase.",
+        duracao: Math.round(performance.now() - inicio),
+      };
+    }
+
     const { data, error } = await supabase.from("clientes").select("id").limit(1);
     const duracao = Math.round(performance.now() - inicio);
 
-    if (error && error.code !== "PGRST116" && error.code !== "42501") {
-      return { ok: false, mensagem: `Erro retornado pelo Supabase: ${error.message} (Código ${error.code})`, duracao };
+    if (error) {
+      const permissionError = ["42501", "PGRST301", "401", "403"].includes(String(error.code || error.status));
+      return {
+        ok: false,
+        status: permissionError ? "permission_error" : "connection_error",
+        mensagem: `Erro retornado pelo Supabase: ${error.message} (Código ${error.code || error.status || "desconhecido"})`,
+        duracao,
+      };
     }
 
     return {
       ok: true,
+      status: "connected",
       url: supabaseUrl,
       duracao,
       mensagem: "Conexão com PostgreSQL Supabase estabelecida com sucesso!",
@@ -65,6 +98,7 @@ export async function testarConexaoSupabase() {
   } catch (err) {
     return {
       ok: false,
+      status: "connection_error",
       mensagem: `Falha na comunicação de rede com o Supabase: ${err.message}`,
     };
   }

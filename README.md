@@ -1,5 +1,4 @@
 # RecebeAi - Plataforma SaaS de Gestão de Cobranças e Recebíveis
-
 O **RecebeAi** é uma solução completa de Software como Serviço (SaaS) desenvolvida para pequenas e médias empresas reduzirem a inadimplência e automatizarem o fluxo de contas a receber.
 
 ---
@@ -41,16 +40,30 @@ npm run build
 
 ---
 
-## 🗄️ Conectando ao Banco de Dados Supabase (Produção)
+## 🗄️ Deploy automático (GitHub, Supabase e Vercel)
 
-1. Crie um projeto no [Supabase](https://supabase.com/).
-2. No menu **SQL Editor**, copie e execute o conteúdo do arquivo [`supabase/schema.sql`](file:///c:/Users/Alexandre.dasilva/Documents/GitHub/Aplicativo-SAAS-RECEBEAI/supabase/schema.sql).
-3. Crie um arquivo `.env` na raiz do projeto baseado no `.env.example`:
+O workflow em [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) executa testes e build em pull requests para `main`. Após um merge ou push na `main`, aplica as migrations de [`supabase/migrations`](supabase/migrations) no Supabase e, se tudo passar, publica o build de produção na Vercel.
+
+Configure estes **Actions secrets** no repositório do GitHub (`Settings > Secrets and variables > Actions`):
+
+- `SUPABASE_ACCESS_TOKEN`: token de acesso pessoal criado no painel Supabase.
+- `SUPABASE_PROJECT_ID`: referência do projeto Supabase.
+- `SUPABASE_DB_PASSWORD`: senha do banco PostgreSQL do projeto.
+- `VERCEL_TOKEN`: token de acesso da Vercel.
+- `VERCEL_ORG_ID`: ID da equipe/conta da Vercel.
+- `VERCEL_PROJECT_ID`: ID do projeto Vercel conectado a este repositório.
+
+Configure também, nas variáveis de ambiente de **produção** do projeto Vercel, os valores usados pelo frontend:
    ```env
    VITE_SUPABASE_URL=https://seu-projeto.supabase.co
    VITE_SUPABASE_ANON_KEY=sua-chave-anon-aqui
    ```
-4. O aplicativo detectará automaticamente as credenciais e ativará o modo nuvem.
+
+O frontend usa a chave pública `anon`/publishable; nunca configure uma `service_role` no frontend. Para evitar deploys duplicados ou fora de ordem, desative o deploy Git automático da integração Vercel com GitHub e deixe a publicação de produção a cargo deste workflow. PRs não alteram o banco nem publicam na Vercel.
+
+O workflow também repassa explicitamente a senha do banco Supabase ao comando `supabase db push` e escopa a publicação Vercel para a organização correta, evitando que o ambiente de produção seja deployado em outra conta ou projeto.
+
+Para novas alterações de banco, adicione um arquivo SQL versionado em `supabase/migrations` (nome no formato `YYYYMMDDHHMMSS_descricao.sql`). O arquivo `supabase/schema.sql` permanece como referência do schema completo.
 
 ---
 
@@ -64,5 +77,5 @@ Para comercializar o RecebeAi no mercado brasileiro (B2B):
 2. **Gateway de Assinaturas**:
    - Conecte um provedor como Asaas, Mercado Pago ou Stripe para cobrar as mensalidades dos assinantes via Cartão de Crédito ou PIX Recorrente.
 3. **Deploy na Vercel**:
-   - O projeto já conta com o arquivo [`vercel.json`](file:///c:/Users/Alexandre.dasilva/Documents/GitHub/Aplicativo-SAAS-RECEBEAI/vercel.json) configurado para roteamento SPA sem erros de 404 ao recarregar a página.
+   - O projeto já conta com o arquivo [`vercel.json`](vercel.json) configurado para roteamento SPA sem erros de 404 ao recarregar a página.
    - Basta importar o repositório na Vercel e adicionar as variáveis de ambiente.

@@ -1,10 +1,16 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { supabase, isSupabaseConfigured } from "@/api/supabaseClient";
+import { base44, disableDemoMode } from "@/api/base44Client";
+import { getInitialAuthState, loadCurrentSupabaseUser, registerWithSupabase, resolveAuthenticatedProfile, signInWithSupabase, signOutFromSupabase } from "@/lib/authFlows";
 
-const AuthContext = createContext({});
+const AuthContext = createContext(null);
 
 const AUTH_STORAGE_KEY = "recebeai_auth_user";
-const TENANTS_STORAGE_KEY = "recebeai_tenants_registry";
+const INITIAL_AUTH_STATE = getInitialAuthState();
+
+function clearDemoUserStorage() {
+  try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch (e) {}
+}
 
 // Contas padrão pré-configuradas para demonstração e acesso imediato
 export const DEFAULT_USERS = {
@@ -31,156 +37,112 @@ export const DEFAULT_USERS = {
   },
 };
 
-// Helper para obter lista de empresas cadastradas localmente (modo offline / fallback)
-function getLocalTenants() {
-  try {
-    const raw = localStorage.getItem(TENANTS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-function saveLocalTenant(tenant) {
-  try {
-    const tenants = getLocalTenants();
-    const filtered = tenants.filter((t) => t.email !== tenant.email);
-    filtered.push(tenant);
-    localStorage.setItem(TENANTS_STORAGE_KEY, JSON.stringify(filtered));
-  } catch (e) {
-    console.warn("Erro ao salvar tenant:", e);
-  }
-}
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch (e) {
-      console.warn("Erro ao ler usuário salvo:", e);
-    }
-    // Inicializa como null para novos visitantes na Landing Page
-    return null;
-  });
+  const [user, setUser] = useState(INITIAL_AUTH_STATE.user);
+  const [loadingAuth, setLoadingAuth] = useState(INITIAL_AUTH_STATE.loadingAuth);
+  const [authError, setAuthError] = useState("");
+  const [demoSession, setDemoSession] = useState(false);
+  const authModeRef = useRef("initializing");
+  const authRequestRef = useRef(0);
 
-  const [loading, setLoading] = useState(false);
+  const resolveProfile = (authUser) => resolveAuthenticatedProfile(supabase, authUser);
 
   useEffect(() => {
-    if (user) {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    let active = true;
+
+    const clearAuthenticatedUser = () => {
+      authRequestRef.current += 1;
+      setUser(null);
+      setDemoSession(false);
+      setLoadingAuth(false);
+    };
+
+    const syncCurrentSession = async () => {
+      const requestId = ++authRequestRef.current;
+      const result = await loadCurrentSupabaseUser(supabase.auth, resolveProfile);
+      if (!active || requestId !== authRequestRef.current || authModeRef.current === "demo" || authModeRef.current === "logged_out") return;
+
+      if (result.success) {
+        setUser(result.user);
+        setDemoSession(false);
+        authModeRef.current = result.user ? "supabase" : "anonymous";
+        setAuthError("");
+      } else {
+        setUser(null);
+        authModeRef.current = "anonymous";
+        setAuthError(result.message);
+      }
+      setLoadingAuth(false);
+    };
+
+    clearDemoUserStorage();
+    if (!isSupabaseConfigured) {
+      authModeRef.current = "anonymous";
+      setUser(null);
+      setLoadingAuth(false);
+      setAuthError("Supabase não está configurado. O login real está indisponível.");
     } else {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
+      void syncCurrentSession();
     }
-  }, [user]);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active || authModeRef.current === "demo" || authModeRef.current === "logged_out") return;
+      if (event === "SIGNED_OUT" || !session) {
+        authModeRef.current = "anonymous";
+        clearAuthenticatedUser();
+        return;
+      }
+      setTimeout(() => {
+        if (active && authModeRef.current !== "demo" && authModeRef.current !== "logged_out") {
+          void syncCurrentSession();
+        }
+      }, 0);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Login de Cliente ou Administrador
   const login = async (email, password) => {
-    setLoading(true);
-    try {
-      const emailClean = email.trim().toLowerCase();
-
-      // 1. Se Supabase estiver conectado, tenta autenticar via Supabase Auth
-      if (isSupabaseConfigured) {
-        try {
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email: emailClean,
-            password,
-          });
-
-          if (!error && data?.user) {
-            const isAdminEmail =
-              emailClean === "admin@recebeai.com.br" ||
-              emailClean.startsWith("admin@");
-
-            // Busca os dados da empresa vinculada ao user_id
-            let empresaData = null;
-            try {
-              const { data: emp } = await supabase
-                .from("empresas")
-                .select("*")
-                .eq("user_id", data.user.id)
-                .maybeSingle();
-              empresaData = emp;
-            } catch (err) {
-              console.warn("Aviso ao buscar empresa no Supabase:", err);
-            }
-
-            const authUser = {
-              id: data.user.id,
-              email: data.user.email,
-              nome:
-                data.user.user_metadata?.nome ||
-                (isAdminEmail ? "Administrador Master" : "Cliente RecebeAi"),
-              role: isAdminEmail ? "admin" : "cliente",
-              empresa_id: empresaData?.id || `emp-${data.user.id.slice(0, 8)}`,
-              empresa_nome:
-                empresaData?.razao_social ||
-                data.user.user_metadata?.empresa ||
-                "Minha Empresa",
-              cnpj: empresaData?.cnpj || "",
-              telefone: empresaData?.telefone || "",
-              plano: empresaData?.plano || "profissional",
-            };
-
-            setUser(authUser);
-            return { success: true, user: authUser };
-          }
-        } catch (supabaseErr) {
-          console.warn("Falha no login Supabase, utilizando fallback multi-empresa:", supabaseErr);
-        }
-      }
-
-      // 2. Fallback: Checa se é o Administrador Master pré-configurado
-      if (emailClean === "admin@recebeai.com.br" || emailClean === "admin") {
-        const adminUser = { ...DEFAULT_USERS.admin, email: emailClean };
-        setUser(adminUser);
-        return { success: true, user: adminUser };
-      }
-
-      // 3. Fallback: Checa se é a empresa cliente demo (TechSolutions)
-      if (
-        emailClean === "financeiro@techsolutions.com.br" ||
-        emailClean === "cliente@recebeai.com.br" ||
-        emailClean === "cliente"
-      ) {
-        setUser(DEFAULT_USERS.cliente);
-        return { success: true, user: DEFAULT_USERS.cliente };
-      }
-
-      // 4. Fallback: Busca entre as empresas cadastradas localmente
-      const localTenants = getLocalTenants();
-      const existingTenant = localTenants.find((t) => t.email === emailClean);
-
-      if (existingTenant) {
-        setUser(existingTenant);
-        return { success: true, user: existingTenant };
-      }
-
-      // 5. Se digitou qualquer outro e-mail válido, cria dinamicamente uma sessão de empresa isolada
-      const novaEmpresaId = `emp-${Date.now().toString(36)}`;
-      const nomeFormatado = emailClean.split("@")[0].replace(/[._-]/g, " ").toUpperCase();
-      const novoClienteUser = {
-        id: `usr-${Date.now().toString(36)}`,
-        nome: nomeFormatado,
-        email: emailClean,
-        role: "cliente",
-        cargo: "Gestor(a) Financeiro",
-        empresa_id: novaEmpresaId,
-        empresa_nome: `Empresa ${nomeFormatado}`,
-        cnpj: "",
-        telefone: "",
-        plano: "essencial",
-      };
-
-      saveLocalTenant(novoClienteUser);
-      setUser(novoClienteUser);
-      return { success: true, user: novoClienteUser };
-    } finally {
-      setLoading(false);
+    disableDemoMode();
+    clearDemoUserStorage();
+    setUser(null);
+    setDemoSession(false);
+    authRequestRef.current += 1;
+    setAuthError("");
+    setLoadingAuth(true);
+    authModeRef.current = "authenticating";
+    if (!isSupabaseConfigured) {
+      const result = { success: false, message: "Supabase não está configurado. O login real está indisponível." };
+      setUser(null);
+      setAuthError(result.message);
+      setLoadingAuth(false);
+      authModeRef.current = "anonymous";
+      return result;
     }
+
+    const result = await signInWithSupabase(supabase.auth, email, password, resolveProfile);
+    if (!result.success) {
+      try { await supabase.auth.signOut({ scope: "local" }); } catch (e) {}
+      authRequestRef.current += 1;
+      setUser(null);
+      setAuthError(result.message);
+      setLoadingAuth(false);
+      authModeRef.current = "anonymous";
+      return result;
+    }
+
+  authRequestRef.current += 1;
+    authModeRef.current = "supabase";
+    clearDemoUserStorage();
+    setUser(result.user);
+    setDemoSession(false);
+    setAuthError("");
+    setLoadingAuth(false);
+    return result;
   };
 
   // Cadastro de Nova Empresa Multi-tenant
@@ -193,119 +155,74 @@ export function AuthProvider({ children }) {
     telefone = "",
     plano = "profissional",
   }) => {
-    setLoading(true);
-    try {
-      const emailClean = email.trim().toLowerCase();
-
-      // 1. Se Supabase estiver conectado, cria no Auth e na tabela public.empresas
-      if (isSupabaseConfigured) {
-        try {
-          const { data: authData, error: authError } = await supabase.auth.signUp({
-            email: emailClean,
-            password,
-            options: {
-              data: {
-                nome,
-                empresa: razaoSocial,
-                plano,
-              },
-            },
-          });
-
-          if (authError) {
-            console.warn("Erro no signUp do Supabase:", authError);
-          } else if (authData?.user) {
-            // Cria a empresa vinculada ao user_id no Supabase
-            let createdEmpresaId = null;
-            try {
-              const { data: empRow, error: empErr } = await supabase
-                .from("empresas")
-                .insert({
-                  user_id: authData.user.id,
-                  razao_social: razaoSocial,
-                  cnpj,
-                  telefone,
-                  email: emailClean,
-                  plano,
-                  limite_titulos: plano === "enterprise" ? 999999 : plano === "profissional" ? 2000 : 300,
-                })
-                .select("id")
-                .single();
-
-              if (!empErr && empRow) {
-                createdEmpresaId = empRow.id;
-              }
-            } catch (errEmp) {
-              console.warn("Aviso ao inserir em public.empresas:", errEmp);
-            }
-
-            const novoUser = {
-              id: authData.user.id,
-              email: emailClean,
-              nome,
-              role: "cliente",
-              cargo: "Diretor(a) / Gestor(a)",
-              empresa_id: createdEmpresaId || `emp-${authData.user.id.slice(0, 8)}`,
-              empresa_nome: razaoSocial,
-              cnpj,
-              telefone,
-              plano,
-            };
-
-            setUser(novoUser);
-            saveLocalTenant(novoUser);
-            return { success: true, user: novoUser };
-          }
-        } catch (supabaseErr) {
-          console.warn("Fallback de registro local após erro no Supabase:", supabaseErr);
-        }
-      }
-
-      // 2. Fallback de isolamento local garantido
-      const novoTenantId = `emp-${Date.now().toString(36)}`;
-      const novoUser = {
-        id: `usr-${Date.now().toString(36)}`,
-        nome,
-        email: emailClean,
-        role: "cliente",
-        cargo: "Diretor(a) / Gestor(a)",
-        empresa_id: novoTenantId,
-        empresa_nome: razaoSocial,
-        cnpj,
-        telefone,
-        plano,
-      };
-
-      saveLocalTenant(novoUser);
-      setUser(novoUser);
-      return { success: true, user: novoUser };
-    } finally {
-      setLoading(false);
+    disableDemoMode();
+    clearDemoUserStorage();
+    setUser(null);
+    setDemoSession(false);
+    authRequestRef.current += 1;
+    setAuthError("");
+    setLoadingAuth(true);
+    authModeRef.current = "authenticating";
+    if (!isSupabaseConfigured) {
+      const result = { success: false, message: "Supabase não está configurado. O cadastro real está indisponível." };
+      setAuthError(result.message);
+      setLoadingAuth(false);
+      authModeRef.current = "anonymous";
+      return result;
     }
+
+    const result = await registerWithSupabase(supabase, { nome, email, password, razaoSocial, cnpj, telefone, plano });
+    if (!result.success) {
+      authRequestRef.current += 1;
+      setUser(null);
+      setAuthError(result.message);
+      setLoadingAuth(false);
+      authModeRef.current = "anonymous";
+      return result;
+    }
+
+  authRequestRef.current += 1;
+    authModeRef.current = "supabase";
+    clearDemoUserStorage();
+    setUser(result.user);
+    setDemoSession(false);
+    setAuthError("");
+    setLoadingAuth(false);
+    return result;
   };
 
   const logout = () => {
-    if (isSupabaseConfigured) {
-      try {
-        supabase.auth.signOut();
-      } catch (e) {
-        console.warn(e);
-      }
-    }
+    authModeRef.current = "logged_out";
+    authRequestRef.current += 1;
     setUser(null);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    setDemoSession(false);
+    setLoadingAuth(false);
+    clearDemoUserStorage();
+    return signOutFromSupabase(supabase.auth, () => {
+      setUser(null);
+      setDemoSession(false);
+    }).then((result) => {
+      setAuthError(result.success ? "" : `Sessão local encerrada, mas não foi possível confirmar a saída do Supabase: ${result.message}`);
+      return result;
+    });
   };
 
-  const alternarPerfilDemonstracao = (tipo) => {
-    if (tipo === "admin") {
-      setUser(DEFAULT_USERS.admin);
-    } else {
-      setUser(DEFAULT_USERS.cliente);
-    }
+  const alternarPerfilDemonstracao = async (tipo) => {
+    authModeRef.current = "demo";
+    authRequestRef.current += 1;
+    try { await supabase.auth.signOut({ scope: "local" }); } catch (e) {}
+    const demoUser = tipo === "admin" ? DEFAULT_USERS.admin : DEFAULT_USERS.cliente;
+    try { localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(demoUser)); } catch (e) {}
+    base44.resetDemoData();
+    setUser(demoUser);
+    setDemoSession(true);
+    setAuthError("");
+    setLoadingAuth(false);
+    return { success: true, user: demoUser };
   };
 
-  const isAdmin = user?.role === "admin";
-  const currentEmpresaId = user?.empresa_id || "emp-demo-techsolutions";
+  const isAdmin = demoSession && user?.role === "admin";
+  const currentEmpresaId = user?.empresa_id || null;
 
   return (
     <AuthContext.Provider
@@ -313,7 +230,10 @@ export function AuthProvider({ children }) {
         user,
         isAdmin,
         currentEmpresaId,
-        loading,
+        loading: loadingAuth,
+        loadingAuth,
+        authError,
+        clearAuthError: () => setAuthError(""),
         login,
         register,
         logout,

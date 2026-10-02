@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { formatCurrency, formatDate, daysBetween } from "@/lib/format";
+import { getSaldoRecebivel } from "@/lib/recebiveis";
 import {
   TrendingUp,
   Target,
@@ -70,7 +71,7 @@ export default function Recuperacao() {
         if (!r.vencimento) return false;
         return daysBetween(r.vencimento) > 0;
       })
-      .reduce((acc, r) => acc + ((Number(r.valor) || 0) - (Number(r.valor_pago) || 0)), 0);
+      .reduce((acc, r) => acc + getSaldoRecebivel(r), 0);
 
     // Títulos recuperados (pagos) no período selecionado
     const recuperadosPeriodo = recebiveis.filter((r) => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { testarConexaoSupabase } from "@/api/supabaseClient";
+import { isSupabaseConfigured, supabase, testarConexaoSupabase } from "@/api/supabaseClient";
+import { runTenantDiagnostic } from "@/lib/tenantDiagnostic";
 import {
   MERCADO_PAGO_PLANS,
   redirecionarParaMercadoPago,
@@ -28,6 +29,15 @@ import {
   RefreshCw,
   Server
 } from "lucide-react";
+
+const diagnosticRelationshipLabels = {
+  "recebiveis → clientes": "Cliente → Recebível",
+  "cobrancas → clientes": "Cliente → Cobrança",
+  "cobrancas → recebiveis": "Recebível → Cobrança",
+  "promessas → clientes": "Cliente → Promessa",
+  "promessas → recebiveis": "Recebível → Promessa",
+  "prioridades_cobranca → clientes": "Cliente → Prioridade",
+};
 
 export default function Configuracoes() {
   const [config, setConfig] = useState({
@@ -63,6 +73,9 @@ export default function Configuracoes() {
   // Estados de teste do Supabase
   const [testandoSupabase, setTestandoSupabase] = useState(false);
   const [resultadoTesteSupabase, setResultadoTesteSupabase] = useState(null);
+  const [executandoDiagnostico, setExecutandoDiagnostico] = useState(false);
+  const [diagnosticoTenant, setDiagnosticoTenant] = useState(null);
+  const [empresaTesteId, setEmpresaTesteId] = useState("");
 
   const handleTestarSupabase = async () => {
     setTestandoSupabase(true);
@@ -74,6 +87,25 @@ export default function Configuracoes() {
       setResultadoTesteSupabase({ ok: false, mensagem: "Erro ao testar conexão: " + err.message });
     } finally {
       setTestandoSupabase(false);
+    }
+  };
+
+  const handleExecutarDiagnosticoTenant = async () => {
+    setExecutandoDiagnostico(true);
+    setDiagnosticoTenant(null);
+    try {
+      const report = await runTenantDiagnostic({
+        supabaseClient: supabase,
+        demoMode: base44.isDemoMode(),
+        otherCompanyId: empresaTesteId,
+      });
+      setDiagnosticoTenant(report);
+    } catch (error) {
+      setDiagnosticoTenant({
+        session: { status: "FALHOU", reason: error.message || "Falha inesperada no diagnóstico." },
+      });
+    } finally {
+      setExecutandoDiagnostico(false);
     }
   };
 
@@ -91,10 +123,13 @@ export default function Configuracoes() {
   const handleSalvar = async (e) => {
     e.preventDefault();
     setSalvando(true);
-    await base44.entities.Configuracao.update(config);
-    setSalvando(false);
-    setSucesso(true);
-    setTimeout(() => setSucesso(false), 3000);
+    try {
+      await base44.entities.Configuracao.update(config);
+      setSucesso(true);
+      setTimeout(() => setSucesso(false), 3000);
+    } finally {
+      setSalvando(false);
+    }
   };
 
   const handleResetarDemo = () => {
@@ -123,18 +158,21 @@ export default function Configuracoes() {
     if (planoCheckout.id === "pro") novoLimite = 300;
     if (planoCheckout.id === "enterprise") novoLimite = 99999;
 
-    const updated = await base44.entities.Configuracao.update({
-      plano_atual: planoCheckout.id,
-      limite_titulos: novoLimite,
-    });
+    try {
+      const updated = await base44.entities.Configuracao.update({
+        plano_atual: planoCheckout.id,
+        limite_titulos: novoLimite,
+      });
 
-    setConfig((prev) => ({ ...prev, ...updated }));
-    setAtivandoPlano(false);
-    setAtivacaoSucesso(true);
+      setConfig((prev) => ({ ...prev, ...updated }));
+      setAtivacaoSucesso(true);
 
-    setTimeout(() => {
-      setModalCheckoutOpen(false);
-    }, 2500);
+      setTimeout(() => {
+        setModalCheckoutOpen(false);
+      }, 2500);
+    } finally {
+      setAtivandoPlano(false);
+    }
   };
 
   if (loading) {
@@ -584,20 +622,131 @@ export default function Configuracoes() {
           </button>
         </div>
 
+        <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">Diagnóstico somente leitura</h3>
+              <p className="mt-1 max-w-2xl text-xs text-slate-600">
+                Usa apenas a sessão Supabase atual e respeita as permissões RLS. Nenhum dado é criado, alterado ou salvo.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleExecutarDiagnosticoTenant}
+              disabled={executandoDiagnostico}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 disabled:cursor-wait disabled:opacity-60"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${executandoDiagnostico ? "animate-spin" : ""}`} />
+              {executandoDiagnostico ? "Consultando..." : "Executar diagnóstico somente leitura"}
+            </button>
+          </div>
+          <label className="mt-4 block max-w-lg text-xs font-medium text-slate-700">
+            ID opcional de outra empresa para verificar se esta sessão consegue consultá-la
+            <input
+              value={empresaTesteId}
+              onChange={(event) => setEmpresaTesteId(event.target.value)}
+              placeholder="UUID da empresa de teste"
+              className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs text-slate-800 placeholder:font-sans"
+            />
+          </label>
+
+          {diagnosticoTenant && (
+            <div className="mt-4 space-y-4 border-t border-slate-100 pt-4 text-xs">
+              <section>
+                <h4 className="font-semibold text-slate-900">Usuário autenticado</h4>
+                <p className="mt-1 text-slate-700">Status: <strong>{diagnosticoTenant.session?.status || "NÃO FOI POSSÍVEL TESTAR"}</strong></p>
+                {diagnosticoTenant.session?.userId && <p className="mt-1 break-all font-mono text-slate-600">user.id: {diagnosticoTenant.session.userId}</p>}
+                {diagnosticoTenant.session?.reason && <p className="mt-1 text-slate-600">{diagnosticoTenant.session.reason}</p>}
+              </section>
+
+              <section className="border-t border-slate-100 pt-3">
+                <h4 className="font-semibold text-slate-900">Empresas vinculadas</h4>
+                <p className="mt-1 text-slate-700">Quantidade: <strong>{diagnosticoTenant.companies?.count ?? "não disponível"}</strong></p>
+                {diagnosticoTenant.companies?.companies?.map((company) => (
+                  <p key={company.id} className="mt-1 break-all font-mono text-slate-600">empresa_id: {company.id}</p>
+                ))}
+                {diagnosticoTenant.companies?.count === 0 && (
+                  <p className="mt-1 font-medium text-amber-800">Usuário autenticado, mas nenhuma empresa vinculada foi encontrada.</p>
+                )}
+                {(diagnosticoTenant.companies?.count ?? 0) > 1 && (
+                  <p className="mt-1 font-medium text-amber-800">Mais de uma empresa vinculada ao usuário. Nenhuma empresa foi escolhida automaticamente.</p>
+                )}
+                {diagnosticoTenant.companies?.reason && diagnosticoTenant.companies.count !== 0 && diagnosticoTenant.companies.count <= 1 && (
+                  <p className="mt-1 text-slate-600">{diagnosticoTenant.companies.reason}</p>
+                )}
+              </section>
+
+              <section className="border-t border-slate-100 pt-3">
+                <h4 className="font-semibold text-slate-900">Contagens visíveis das tabelas</h4>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {diagnosticoTenant.counts?.map((entry) => (
+                    <div key={entry.table} className="rounded-md border border-slate-100 bg-slate-50 px-2.5 py-2">
+                      <p className="font-mono text-slate-800">{entry.table}</p>
+                      <p className="mt-1 text-slate-600">{entry.status}: {entry.visibleCount ?? entry.reason}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="border-t border-slate-100 pt-3">
+                <h4 className="font-semibold text-slate-900">Verificação dos empresa_id</h4>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {diagnosticoTenant.tenantIntegrity?.map((entry) => (
+                    <div key={entry.table} className="rounded-md border border-slate-100 bg-slate-50 px-2.5 py-2">
+                      <p className="font-mono text-slate-800">{entry.table}</p>
+                      <p className="mt-1 text-slate-600">{entry.status}</p>
+                      {entry.reason && <p className="mt-1 text-slate-500">{entry.reason}</p>}
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="border-t border-slate-100 pt-3">
+                <h4 className="font-semibold text-slate-900">Verificação dos relacionamentos</h4>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {diagnosticoTenant.relationships?.map((entry) => (
+                    <div key={entry.relationship} className="rounded-md border border-slate-100 bg-slate-50 px-2.5 py-2">
+                      <p className="text-slate-800">{diagnosticRelationshipLabels[entry.relationship] || entry.relationship}</p>
+                      <p className="mt-1 font-semibold text-slate-700">{entry.status}</p>
+                      {entry.status === "NÃO FOI POSSÍVEL TESTAR"
+                        ? <p className="mt-1 text-slate-600">NÃO FOI POSSÍVEL TESTAR — relacionamento não pôde ser consultado com a sessão atual.</p>
+                        : entry.reason && <p className="mt-1 text-slate-500">{entry.reason}</p>}
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="border-t border-slate-100 pt-3">
+                <h4 className="font-semibold text-slate-900">Teste de outra empresa</h4>
+                <p className="mt-1 text-slate-700">{diagnosticoTenant.otherCompanyIsolation?.status}</p>
+                {diagnosticoTenant.otherCompanyIsolation?.reason && <p className="mt-1 text-slate-600">{diagnosticoTenant.otherCompanyIsolation.reason}</p>}
+              </section>
+            </div>
+          )}
+        </div>
+
         <div className="mt-5 space-y-4">
-          <div className="flex items-start gap-3 rounded-2xl bg-emerald-50/80 p-4 border border-emerald-200">
-            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4 border border-slate-200">
+            <CheckCircle2 className="h-5 w-5 text-slate-500 shrink-0 mt-0.5" />
             <div className="space-y-1 w-full">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold text-emerald-950">
-                  Supabase Conectado e Operacional em Produção
+                <span className="text-xs font-bold text-slate-900">
+                  {resultadoTesteSupabase?.status === "connected"
+                    ? "Supabase Conectado"
+                    : resultadoTesteSupabase?.status === "permission_error"
+                    ? "Erro de autenticação/permissão Supabase"
+                    : resultadoTesteSupabase?.status === "connection_error"
+                    ? "Sem conexão com Supabase"
+                    : isSupabaseConfigured
+                    ? "Supabase Configurado; conexão não verificada"
+                    : "Supabase Não Configurado"}
                 </span>
-                <span className="rounded-full bg-emerald-200/70 px-2 py-0.5 text-[10px] font-bold text-emerald-900">
-                  Nuvem Ativa
+                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+                  {resultadoTesteSupabase?.status === "connected" ? "Conexão verificada" : "Status não confirmado"}
                 </span>
               </div>
-              <p className="text-xs text-emerald-800">
-                O aplicativo está vinculado ao projeto <code className="rounded bg-emerald-100 px-1.5 py-0.5 font-mono text-[11px] text-emerald-950 font-bold">upuuqfojhqjgzsdycvxp.supabase.co</code>.
+              <p className="text-xs text-slate-600">
+                Projeto configurado: <code className="rounded bg-emerald-100 px-1.5 py-0.5 font-mono text-[11px] text-emerald-950 font-bold">upuuqfojhqjgzsdycvxp.supabase.co</code>.
               </p>
               {resultadoTesteSupabase && (
                 <div className={`mt-2.5 rounded-xl p-2.5 text-xs font-medium border ${
@@ -648,6 +797,7 @@ export default function Configuracoes() {
               <span className="font-semibold text-slate-800">Deploy na Vercel:</span> As credenciais do Supabase já estão embutidas com fallback seguro para produção. Caso queira gerenciá-las diretamente pelo painel da Vercel, basta adicionar as variáveis <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-slate-800">VITE_SUPABASE_URL</code> e <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-slate-800">VITE_SUPABASE_ANON_KEY</code> em <em>Settings &gt; Environment Variables</em>.
             </div>
           </div>
+
         </div>
       </div>
 

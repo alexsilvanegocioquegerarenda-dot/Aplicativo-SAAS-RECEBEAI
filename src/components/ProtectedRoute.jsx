@@ -3,12 +3,14 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { ShieldAlert, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
+import { getProtectedRouteDecision } from "@/lib/authFlows";
 
 export default function ProtectedRoute({ children, requireAdmin = false }) {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loadingAuth } = useAuth();
   const location = useLocation();
+  const access = getProtectedRouteDecision({ loadingAuth, user, requireAdmin, isAdmin });
 
-  if (loading) {
+  if (access === "loading") {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
@@ -17,12 +19,12 @@ export default function ProtectedRoute({ children, requireAdmin = false }) {
   }
 
   // Se não estiver autenticado, redireciona para a tela de login
-  if (!user) {
+  if (access === "login") {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Se a rota for restrita ao Administrador e o usuário for um cliente comum
-  if (requireAdmin && !isAdmin) {
+  if (access === "forbidden") {
     return (
       <div className="mx-auto max-w-lg px-4 py-20 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-red-600 mb-4">

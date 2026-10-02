@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -23,11 +23,13 @@ import {
   ExternalLink,
   ChevronRight,
   Database,
+  RefreshCw,
   Crown,
   LogOut,
   User
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { base44, clearDataReadError, subscribeToDataReadErrors, subscribeToDataWriteErrors, DEMO_MODE_EVENT } from "@/api/base44Client";
+import { isSupabaseConfigured, testarConexaoSupabase } from "@/api/supabaseClient";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Layout({ children }) {
@@ -36,14 +38,51 @@ export default function Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [planoAtual, setPlanoAtual] = useState("pro");
   const [limiteTitulos, setLimiteTitulos] = useState(300);
+  const [supabaseStatus, setSupabaseStatus] = useState(isSupabaseConfigured ? "configured" : "not_configured");
+  const [dataReadError, setDataReadError] = useState(null);
+  const [dataWriteError, setDataWriteError] = useState(null);
+  const [readRetryKey, setReadRetryKey] = useState(0);
+  const [demoMode, setDemoMode] = useState(base44.isDemoMode());
+  const dataReadErrorRef = useRef(false);
+
+  useEffect(() => subscribeToDataReadErrors((error) => {
+    dataReadErrorRef.current = true;
+    setDataReadError(error);
+    if (error.kind === "permission") setSupabaseStatus("permission_error");
+    else if (error.kind === "connection") setSupabaseStatus("connection_error");
+  }), []);
+
+  useEffect(() => subscribeToDataWriteErrors(setDataWriteError), []);
+
+  useEffect(() => {
+    const handleDemoMode = () => setDemoMode(base44.isDemoMode());
+    window.addEventListener(DEMO_MODE_EVENT, handleDemoMode);
+    return () => window.removeEventListener(DEMO_MODE_EVENT, handleDemoMode);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    testarConexaoSupabase().then((result) => {
+      if (!active) return;
+      if (!dataReadErrorRef.current) setSupabaseStatus(result.status);
+      if (result.status === "permission_error" && !demoMode && !isAdmin && !dataReadErrorRef.current) {
+        const error = { kind: "permission", message: result.mensagem };
+        dataReadErrorRef.current = true;
+        setDataReadError(error);
+      }
+    });
+    return () => { active = false; };
+  }, [demoMode, isAdmin]);
 
   useEffect(() => {
     async function carregarPlano() {
-      const cfg = await base44.entities.Configuracao.get();
-      if (cfg) {
-        if (cfg.plano_atual) setPlanoAtual(cfg.plano_atual);
-        if (cfg.limite_titulos) setLimiteTitulos(cfg.limite_titulos);
-      }
+      try {
+        const cfg = await base44.entities.Configuracao.get();
+        if (cfg) {
+          if (cfg.plano_atual) setPlanoAtual(cfg.plano_atual);
+          if (cfg.limite_titulos) setLimiteTitulos(cfg.limite_titulos);
+        }
+      } catch (e) {}
     }
     carregarPlano();
   }, [location.pathname]);
@@ -84,6 +123,14 @@ export default function Layout({ children }) {
     profissional: "Plano Profissional",
     enterprise: "Plano Enterprise",
   };
+
+  const statusConexao = {
+    configured: { label: "Supabase Configurado", className: "bg-blue-50 text-blue-700 border-blue-200" },
+    connected: { label: "Supabase Conectado", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+    connection_error: { label: "Sem conexão Supabase", className: "bg-red-50 text-red-700 border-red-200" },
+    permission_error: { label: "Erro de autenticação/permissão", className: "bg-amber-50 text-amber-800 border-amber-200" },
+    not_configured: { label: "Supabase Não Configurado", className: "bg-slate-100 text-slate-700 border-slate-200" },
+  }[supabaseStatus] || { label: "Verificando Supabase...", className: "bg-slate-100 text-slate-700 border-slate-200" };
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900">
@@ -307,22 +354,19 @@ export default function Layout({ children }) {
           </div>
 
           <div className="flex items-center gap-3">
-            {base44.isSupabaseConnected ? (
-              <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 border border-emerald-200">
-                <Database className="h-3 w-3" />
-                <span>Supabase Conectado</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 border border-amber-200" title="Utilizando banco de dados local. Conecte ao Supabase em Configurações.">
-                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
-                <span>Modo Local / Demonstração</span>
-              </div>
-            )}
+            <div className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${demoMode ? "bg-amber-50 text-amber-800 border-amber-200" : statusConexao.className}`}>
+              <Database className="h-3 w-3" />
+              <span>{demoMode ? "Dados Demo (Local)" : statusConexao.label}</span>
+            </div>
 
             <button
               onClick={() => {
                 base44.resetDemoData();
-                window.location.reload();
+                dataReadErrorRef.current = false;
+                setDemoMode(true);
+                clearDataReadError();
+                setDataReadError(null);
+                setReadRetryKey((key) => key + 1);
               }}
               title="Restaurar dados fictícios completos da carteira de cobrança"
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-sm"
@@ -343,7 +387,49 @@ export default function Layout({ children }) {
 
         {/* Page Body */}
         <main className="flex-1 overflow-y-auto">
-          {children}
+          {dataReadError ? (
+            <div role="alert" className="mx-auto mt-12 max-w-xl rounded-xl border border-red-200 bg-white p-6 text-center shadow-sm">
+              <p className="text-sm font-semibold text-slate-900">Não foi possível carregar os dados. Verifique sua conexão e tente novamente.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  dataReadErrorRef.current = false;
+                  clearDataReadError();
+                  setDataReadError(null);
+                  setSupabaseStatus(isSupabaseConfigured ? "configured" : "not_configured");
+                  testarConexaoSupabase().then((result) => {
+                    if (!dataReadErrorRef.current) setSupabaseStatus(result.status);
+                  });
+                  setReadRetryKey((key) => key + 1);
+                }}
+                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Tentar novamente
+              </button>
+              {dataReadError.kind === "permission" && (
+                <p className="mt-3 text-xs text-amber-700">O Supabase recusou o acesso. Verifique a autenticação e as permissões desta empresa.</p>
+              )}
+            </div>
+          ) : dataWriteError ? (
+            <div role="alert" className="mx-auto mt-12 max-w-xl rounded-xl border border-red-200 bg-white p-6 text-center shadow-sm">
+              <p className="text-sm font-semibold text-slate-900">
+                {dataWriteError.source === "demo"
+                  ? "Não foi possível gravar os dados locais da demonstração."
+                  : "A operação não foi confirmada pelo Supabase. Nenhum dado foi simulado como salvo."}
+              </p>
+              <p className="mt-2 text-xs text-slate-600">{dataWriteError.message}</p>
+              <button
+                type="button"
+                onClick={() => setDataWriteError(null)}
+                className="mt-4 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Fechar
+              </button>
+            </div>
+          ) : (
+            <div key={readRetryKey} className="contents">{children}</div>
+          )}
         </main>
       </div>
     </div>

@@ -1,3 +1,5 @@
+import { getSaldoRecebivel } from "./recebiveis.js";
+
 export const AGING_FAIXAS_KEYS = [
   "current",
   "01_30",
@@ -171,9 +173,7 @@ export function calcAgingCarteira(recebiveis = [], dataReferencia = new Date()) 
   emAberto.forEach(r => {
     const faixa = getRecebivelFaixa(r, dataReferencia);
     if (faixa && stats[faixa]) {
-      const saldo = typeof r.saldo === "number" 
-        ? r.saldo 
-        : (Number(r.valor) || 0) - (Number(r.valor_pago) || 0);
+      const saldo = getSaldoRecebivel(r);
       stats[faixa].valor += saldo;
       stats[faixa].quantidade += 1;
       if (r.cliente_id) stats[faixa].clientesSet.add(r.cliente_id);

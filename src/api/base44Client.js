@@ -1,7 +1,260 @@
 import { supabase, isSupabaseConfigured } from "./supabaseClient.js";
 import { getAgingDays } from "../lib/aging.js";
+import { resolveAuthenticatedProfile } from "../lib/authFlows.js";
 
-const STORAGE_KEY_PREFIX = "recebeai_data_";
+const DEMO_DATA_KEY_PREFIX = "recebeai_demo_data_";
+const DEMO_MODE_KEY_PREFIX = "recebeai_demo_mode_";
+export const DATA_READ_ERROR_EVENT = "recebeai:data-read-error";
+export const DATA_WRITE_ERROR_EVENT = "recebeai:data-write-error";
+export const DEMO_MODE_EVENT = "recebeai:demo-mode-changed";
+const demoModeTenants = new Set();
+const dataReadErrorListeners = new Set();
+const dataWriteErrorListeners = new Set();
+let lastDataReadError = null;
+
+function isPermissionError(error) {
+  const code = String(error?.code || error?.status || "");
+  return ["42501", "PGRST301", "401", "403"].includes(code);
+}
+
+function createDataReadError(tableName, cause) {
+  const detail = cause?.message || "erro desconhecido";
+  const error = new Error(`Não foi possível carregar dados de ${tableName}: ${detail}`);
+  error.name = "SupabaseReadError";
+  error.tableName = tableName;
+  error.code = cause?.code || cause?.status || "SUPABASE_READ_ERROR";
+  error.kind = isPermissionError(cause) ? "permission" : "connection";
+  return error;
+}
+
+export function resolveSupabaseRead({ data, error }, tableName) {
+  if (error) throw createDataReadError(tableName, error);
+  return data ?? [];
+}
+
+function dispatchDataReadError(error) {
+  const detail = { message: error.message, kind: error.kind, code: error.code, tableName: error.tableName };
+  lastDataReadError = detail;
+  dataReadErrorListeners.forEach((listener) => listener(detail));
+  if (typeof window !== "undefined" && typeof CustomEvent !== "undefined") {
+    window.dispatchEvent(new CustomEvent(DATA_READ_ERROR_EVENT, {
+      detail,
+    }));
+  }
+}
+
+export function subscribeToDataReadErrors(listener) {
+  dataReadErrorListeners.add(listener);
+  if (lastDataReadError) listener(lastDataReadError);
+  return () => dataReadErrorListeners.delete(listener);
+}
+
+export function clearDataReadError() {
+  lastDataReadError = null;
+}
+
+export class SupabaseWriteError extends Error {
+  constructor({ message, code, operation, tableName, kind, source, cause }) {
+    super(message);
+    this.name = "SupabaseWriteError";
+    this.code = code || "SUPABASE_WRITE_ERROR";
+    this.source = source || "supabase";
+    this.operation = operation;
+    this.tableName = tableName;
+    this.kind = kind || "database";
+    this.cause = cause;
+  }
+}
+
+function toWriteError(cause, operation, tableName, override = {}) {
+  if (cause instanceof SupabaseWriteError) return cause;
+  const code = override.code || cause?.code || cause?.status || "SUPABASE_WRITE_ERROR";
+  let kind = "database";
+  if (code === "AUTH_REQUIRED" || isPermissionError({ code })) kind = "permission";
+  else if (String(code).startsWith("23")) kind = "constraint";
+  else if (code === "CONNECTION_ERROR" || code === "SUPABASE_NOT_CONFIGURED") kind = "connection";
+  return new SupabaseWriteError({
+    message: override.message || cause?.message || `Falha ao executar ${operation} em ${tableName}.`,
+    code,
+    operation,
+    tableName,
+    kind: override.kind || kind,
+    source: override.source,
+    cause,
+  });
+}
+
+function notifyWriteError(error) {
+  const detail = {
+    message: error.message,
+    code: error.code,
+    source: error.source,
+    operation: error.operation,
+    tableName: error.tableName,
+    kind: error.kind,
+  };
+  dataWriteErrorListeners.forEach((listener) => listener(detail));
+  if (typeof window !== "undefined" && typeof CustomEvent !== "undefined") {
+    window.dispatchEvent(new CustomEvent(DATA_WRITE_ERROR_EVENT, { detail }));
+  }
+}
+
+export function subscribeToDataWriteErrors(listener) {
+  dataWriteErrorListeners.add(listener);
+  return () => dataWriteErrorListeners.delete(listener);
+}
+
+async function confirmSupabaseWrite(operation, tableName, request, allowNoRecord = false) {
+  try {
+    const { data, error } = await request();
+    if (error) throw error;
+    if (!allowNoRecord && (!data || (Array.isArray(data) && data.length === 0))) {
+      throw toWriteError(null, operation, tableName, {
+        code: "NOT_FOUND_OR_FORBIDDEN",
+        message: "Registro não encontrado ou sem permissão para esta empresa.",
+      });
+    }
+    return data;
+  } catch (cause) {
+    const writeError = toWriteError(cause, operation, tableName);
+    notifyWriteError(writeError);
+    throw writeError;
+  }
+}
+
+export async function getAuthenticatedTenantContext(client = supabase, operation = "write") {
+  try {
+    const { data: sessionData, error: sessionError } = await client.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (!sessionData?.session) {
+      throw toWriteError(null, operation, "auth", {
+        code: "AUTH_REQUIRED",
+        message: "Sua sessão expirou. Entre novamente para salvar os dados.",
+      });
+    }
+
+    const { data: userData, error: userError } = await client.auth.getUser();
+    if (userError) throw userError;
+    if (!userData?.user?.id || userData.user.id !== sessionData.session.user.id) {
+      throw toWriteError(null, operation, "auth", {
+        code: "AUTH_REQUIRED",
+        message: "Não foi possível validar sua sessão do Supabase.",
+      });
+    }
+
+    const profile = await resolveAuthenticatedProfile(client, userData.user);
+    return { userId: userData.user.id, empresaId: profile.empresa_id };
+  } catch (cause) {
+    const error = toWriteError(cause, operation, "auth");
+    notifyWriteError(error);
+    throw error;
+  }
+}
+
+function assertPayloadTenant(payload, empresaId, operation, tableName) {
+  if (payload?.empresa_id && String(payload.empresa_id) !== String(empresaId)) {
+    const error = toWriteError(null, operation, tableName, {
+      code: "TENANT_MISMATCH",
+      message: "A empresa informada não corresponde à empresa da sessão autenticada.",
+    });
+    notifyWriteError(error);
+    throw error;
+  }
+}
+
+function persistDemoData(entityName, items) {
+  const tenantId = getActiveTenantId();
+  try {
+    localStorage.setItem(`${DEMO_DATA_KEY_PREFIX}${tenantId}_${entityName}`, JSON.stringify(items));
+  } catch (error) {
+    const writeError = toWriteError(error, "demo", entityName, {
+      code: "DEMO_STORAGE_ERROR",
+      source: "demo",
+      kind: "local",
+      message: "Não foi possível salvar os dados da demonstração neste navegador.",
+    });
+    notifyWriteError(writeError);
+    throw writeError;
+  }
+}
+
+function isUuid(value) {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+export async function updateCompanyConfiguration(updates, dependencies = {}) {
+  const database = dependencies.supabaseClient || supabase;
+  const configured = dependencies.isConfigured ?? isSupabaseConfigured;
+  const demoIsActive = dependencies.isDemoMode || isDemoMode;
+  const readDemo = dependencies.getDemoData || getDemoData;
+  const writeDemo = dependencies.setDemoData || setDemoData;
+
+  if (demoIsActive()) {
+    const updated = { ...readDemo("Configuracao"), ...updates, atualizado_em: new Date().toISOString() };
+    writeDemo("Configuracao", updated);
+    return updated;
+  }
+  if (!configured) {
+    const error = toWriteError(null, "update", "empresas", {
+      code: "SUPABASE_NOT_CONFIGURED",
+      message: "Supabase não está configurado; a configuração não foi salva.",
+    });
+    notifyWriteError(error);
+    throw error;
+  }
+
+  let tenant;
+  try {
+    tenant = dependencies.resolveTenant
+      ? await dependencies.resolveTenant("update")
+      : await getAuthenticatedTenantContext(database, "update");
+  } catch (cause) {
+    if (cause instanceof SupabaseWriteError) throw cause;
+    const error = toWriteError(cause, "update", "empresas");
+    notifyWriteError(error);
+    throw error;
+  }
+
+  assertPayloadTenant(updates, tenant.empresaId, "update", "empresas");
+  if (updates.id && String(updates.id) !== String(tenant.empresaId)) {
+    const error = toWriteError(null, "update", "empresas", {
+      code: "TENANT_MISMATCH",
+      message: "A configuração informada não pertence à empresa autenticada.",
+    });
+    notifyWriteError(error);
+    throw error;
+  }
+  const payload = { ...updates, atualizado_em: new Date().toISOString() };
+  delete payload.id;
+  delete payload.user_id;
+  delete payload.empresa_id;
+
+  return confirmSupabaseWrite("update", "empresas", () =>
+    database.from("empresas")
+      .update(payload)
+      .eq("id", tenant.empresaId)
+      .eq("user_id", tenant.userId)
+      .select("*")
+      .maybeSingle()
+  );
+}
+
+async function readSupabase(tableName, query) {
+  if (!isSupabaseConfigured || !tableName) {
+    const error = createDataReadError(tableName || "Supabase", new Error("Supabase não configurado."));
+    error.kind = "configuration";
+    dispatchDataReadError(error);
+    throw error;
+  }
+
+  try {
+    return resolveSupabaseRead(await query(), tableName);
+  } catch (cause) {
+    const error = cause?.name === "SupabaseReadError" ? cause : createDataReadError(tableName, cause);
+    dispatchDataReadError(error);
+    throw error;
+  }
+}
 
 // Seed de dados iniciais realistas para demonstração e uso imediato
 export function getFreshInitialData() {
@@ -360,54 +613,57 @@ function getActiveTenantId() {
   return "emp-demo-techsolutions";
 }
 
-function getLocalData(entityName) {
+export function isDemoMode() {
   const tenantId = getActiveTenantId();
-  const storageKey = `${STORAGE_KEY_PREFIX}${tenantId}_${entityName}`;
-  const freshData = getFreshInitialData();
-
+  if (demoModeTenants.has(tenantId)) return true;
   try {
-    const raw = localStorage.getItem(storageKey);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      // Se for array e contiver dados válidos, retorna os dados
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-      // Se for objeto de configuração com propriedades
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && Object.keys(parsed).length > 0) {
-        return parsed;
-      }
-    }
+    return sessionStorage.getItem(`${DEMO_MODE_KEY_PREFIX}${tenantId}`) === "true";
   } catch (e) {
-    console.warn("Erro ao ler localStorage multi-tenant:", e);
+    return false;
   }
-
-  // Tenta recuperar da chave legada sem tenant (ex: recebeai_data_Cliente)
-  try {
-    const legacyRaw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${entityName}`);
-    if (legacyRaw) {
-      const legacyParsed = JSON.parse(legacyRaw);
-      if (Array.isArray(legacyParsed) && legacyParsed.length > 0) {
-        setLocalData(entityName, legacyParsed);
-        return legacyParsed;
-      }
-    }
-  } catch (e) {}
-
-  // Se estiver vazio (array vazio ou chave inexistente), carrega e salva os dados fictícios iniciais
-  const defaultData = freshData[entityName] || [];
-  setLocalData(entityName, defaultData);
-  return defaultData;
 }
 
-function setLocalData(entityName, data) {
-  const tenantId = getActiveTenantId();
-  const storageKey = `${STORAGE_KEY_PREFIX}${tenantId}_${entityName}`;
+export function disableDemoMode() {
+  demoModeTenants.clear();
   try {
-    localStorage.setItem(storageKey, JSON.stringify(data));
-  } catch (e) {
-    console.warn("Erro ao salvar localStorage multi-tenant:", e);
+    for (let index = sessionStorage.length - 1; index >= 0; index -= 1) {
+      const key = sessionStorage.key(index);
+      if (key?.startsWith(DEMO_MODE_KEY_PREFIX)) sessionStorage.removeItem(key);
+    }
+  } catch (e) {}
+  if (typeof window !== "undefined" && typeof CustomEvent !== "undefined") {
+    window.dispatchEvent(new CustomEvent(DEMO_MODE_EVENT, { detail: { enabled: false } }));
   }
+}
+
+function getDemoData(entityName) {
+  const tenantId = getActiveTenantId();
+  const key = `${DEMO_DATA_KEY_PREFIX}${tenantId}_${entityName}`;
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return INITIAL_DATA[entityName] ?? [];
+}
+
+function setDemoData(entityName, data) {
+  persistDemoData(entityName, data);
+}
+
+function sortAndLimit(items, sortField, limit) {
+  let result = [...items];
+  if (sortField) {
+    const isDesc = sortField.startsWith("-");
+    const col = isDesc ? sortField.slice(1) : sortField;
+    result.sort((a, b) => {
+      const valA = a[col] ?? a.created_date ?? a.criado_em ?? "";
+      const valB = b[col] ?? b.created_date ?? b.criado_em ?? "";
+      if (valA < valB) return isDesc ? 1 : -1;
+      if (valA > valB) return isDesc ? -1 : 1;
+      return 0;
+    });
+  }
+  return typeof limit === "number" ? result.slice(0, limit) : result;
 }
 
 // Mapeamento de entidades para tabelas do Supabase (PostgreSQL)
@@ -425,131 +681,104 @@ const TABLE_MAP = {
 };
 
 // Cria a API compatível com base44.entities.[EntityName]
-function createEntityClient(entityName) {
+export function createEntityClient(entityName, dependencies = {}) {
   const tableName = TABLE_MAP[entityName];
+  const database = dependencies.supabaseClient || supabase;
+  const configured = dependencies.isConfigured ?? isSupabaseConfigured;
+  const demoIsActive = dependencies.isDemoMode || isDemoMode;
+  const readDemo = dependencies.getDemoData || getDemoData;
+  const writeDemo = dependencies.setDemoData || setDemoData;
+  const resolveTenant = dependencies.resolveTenant || (() => getAuthenticatedTenantContext(database));
+
+  const throwWriteError = (cause, operation, targetTable, override) => {
+    const error = toWriteError(cause, operation, targetTable, override);
+    notifyWriteError(error);
+    throw error;
+  };
+
+  const requireProductionContext = async (operation, targetTable = tableName) => {
+    if (!configured) {
+      return throwWriteError(null, operation, targetTable, {
+        code: "SUPABASE_NOT_CONFIGURED",
+        message: "Supabase não está configurado; a gravação não foi realizada.",
+      });
+    }
+    if (!targetTable) {
+      return throwWriteError(null, operation, targetTable, {
+        code: "UNKNOWN_TABLE",
+        message: `Não existe tabela Supabase mapeada para ${entityName}.`,
+      });
+    }
+    try {
+      return await resolveTenant(operation);
+    } catch (cause) {
+      if (cause instanceof SupabaseWriteError) throw cause;
+      return throwWriteError(cause, operation, targetTable);
+    }
+  };
+
+  const runConfirmedWrite = async (operation, targetTable, request) =>
+    confirmSupabaseWrite(operation, targetTable, request);
 
   return {
     async list(sortField, limit) {
-      if (isSupabaseConfigured && tableName) {
-        try {
-          let query = supabase.from(tableName).select("*");
-          if (sortField) {
-            const isDesc = sortField.startsWith("-");
-            const col = isDesc ? sortField.slice(1) : sortField;
-            query = query.order(col, { ascending: !isDesc });
-          }
-          if (typeof limit === "number") {
-            query = query.limit(limit);
-          }
-          const { data, error } = await query;
-          if (!error && data && data.length > 0) {
-            return data;
-          }
-        } catch (e) {
-          console.warn(`[Supabase] Erro ao listar ${entityName}:`, e);
-        }
-      }
+      if (isDemoMode()) return sortAndLimit(getDemoData(entityName), sortField, limit);
+      if (!tableName) return readSupabase(tableName, async () => ({ data: null, error: null }));
 
-      let items = [...getLocalData(entityName)];
-      if (sortField) {
-        const isDesc = sortField.startsWith("-");
-        const col = isDesc ? sortField.slice(1) : sortField;
-        items.sort((a, b) => {
-          const valA = a[col] ?? a.created_date ?? a.criado_em ?? "";
-          const valB = b[col] ?? b.created_date ?? b.criado_em ?? "";
-          if (valA < valB) return isDesc ? 1 : -1;
-          if (valA > valB) return isDesc ? -1 : 1;
-          return 0;
-        });
-      }
-      if (typeof limit === "number") {
-        items = items.slice(0, limit);
-      }
-      return items;
+      return readSupabase(tableName, async () => {
+        let query = supabase.from(tableName).select("*");
+        if (sortField) {
+          const isDesc = sortField.startsWith("-");
+          const col = isDesc ? sortField.slice(1) : sortField;
+          query = query.order(col, { ascending: !isDesc });
+        }
+        if (typeof limit === "number") query = query.limit(limit);
+        return query;
+      });
     },
 
     async filter(criteria = {}) {
-      if (isSupabaseConfigured && tableName) {
-        try {
-          let query = supabase.from(tableName).select("*");
-          Object.entries(criteria).forEach(([key, value]) => {
-            query = query.eq(key, value);
-          });
-          const { data, error } = await query;
-          if (!error && data && data.length > 0) {
-            return data;
-          }
-        } catch (e) {
-          console.warn(`[Supabase] Erro ao filtrar ${entityName}:`, e);
-        }
+      if (isDemoMode()) {
+        return getDemoData(entityName).filter((item) => Object.entries(criteria).every(([key, value]) => String(item[key]) === String(value)));
       }
+      if (!tableName) return readSupabase(tableName, async () => ({ data: null, error: null }));
 
-      const items = getLocalData(entityName);
-      return items.filter((item) => {
-        return Object.entries(criteria).every(([key, value]) => {
-          return String(item[key]) === String(value);
+      return readSupabase(tableName, async () => {
+        let query = supabase.from(tableName).select("*");
+        Object.entries(criteria).forEach(([key, value]) => {
+          query = query.eq(key, value);
         });
+        return query;
       });
     },
 
     async get(id) {
-      if (isSupabaseConfigured && tableName) {
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-        if (isUuid) {
-          try {
-            const { data, error } = await supabase
-              .from(tableName)
-              .select("*")
-              .eq("id", id)
-              .maybeSingle();
-            if (!error && data) {
-              return data;
-            }
-          } catch (e) {
-            console.warn(`[Supabase] Erro ao buscar ${entityName}:`, e);
-          }
-        }
-      }
-
-      const items = getLocalData(entityName);
-      return items.find((x) => String(x.id) === String(id)) || null;
+      if (isDemoMode()) return getDemoData(entityName).find((item) => String(item.id) === String(id)) || null;
+      if (!tableName) return readSupabase(tableName, async () => ({ data: null, error: null }));
+      return readSupabase(tableName, () => supabase.from(tableName).select("*").eq("id", id).maybeSingle());
     },
 
     async create(data) {
-      if (isSupabaseConfigured && tableName) {
-        try {
-          const payload = { ...data };
-          // Deixa o PostgreSQL gerar o UUID primário se não for um UUID válido
-          if (payload.id && (payload.id.startsWith("cli-") || payload.id.startsWith("rec-") || payload.id.startsWith("reg-"))) {
-            delete payload.id;
-          }
-          const { data: inserted, error } = await supabase
-            .from(tableName)
-            .insert([payload])
-            .select()
-            .single();
-
-          if (!error && inserted) {
-            const items = getLocalData(entityName);
-            items.push(inserted);
-            setLocalData(entityName, items);
-            return inserted;
-          }
-        } catch (e) {
-          console.warn(`[Supabase] Erro ao criar ${entityName}:`, e);
-        }
+      if (demoIsActive()) {
+        const items = [...readDemo(entityName)];
+        const created = {
+          id: data.id || `${entityName.toLowerCase()}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          criado_em: new Date().toISOString(),
+          created_date: new Date().toISOString(),
+          ...data,
+        };
+        items.push(created);
+        writeDemo(entityName, items);
+        return created;
       }
 
-      const items = getLocalData(entityName);
-      const newItem = {
-        id: `${entityName.toLowerCase()}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        criado_em: new Date().toISOString(),
-        created_date: new Date().toISOString(),
-        ...data,
-      };
-      items.push(newItem);
-      setLocalData(entityName, items);
-      return newItem;
+      const tenant = await requireProductionContext("create");
+      assertPayloadTenant(data, tenant.empresaId, "create", tableName);
+      const payload = { ...data, empresa_id: tenant.empresaId };
+      if (payload.id && !isUuid(payload.id)) delete payload.id;
+      return runConfirmedWrite("create", tableName, () =>
+        database.from(tableName).insert([payload]).select("*").single()
+      );
     },
 
     async bulkCreate(itemsToCreate = []) {
@@ -562,52 +791,48 @@ function createEntityClient(entityName) {
     },
 
     async update(id, updates) {
-      if (isSupabaseConfigured && tableName) {
-        try {
-          const { data: updated, error } = await supabase
-            .from(tableName)
-            .update({ ...updates, atualizado_em: new Date().toISOString() })
-            .eq("id", id)
-            .select()
-            .maybeSingle();
-
-          if (!error && updated) {
-            const items = getLocalData(entityName);
-            const index = items.findIndex(x => x.id === id);
-            if (index !== -1) {
-              items[index] = updated;
-              setLocalData(entityName, items);
-            }
-            return updated;
-          }
-        } catch (e) {
-          console.warn(`[Supabase] Erro ao atualizar ${entityName}:`, e);
-        }
+      if (demoIsActive()) {
+        const items = [...readDemo(entityName)];
+        const index = items.findIndex((item) => String(item.id) === String(id));
+        if (index < 0) return throwWriteError(null, "update", tableName, { code: "NOT_FOUND", message: "Registro não encontrado na demonstração." });
+        items[index] = { ...items[index], ...updates, atualizado_em: new Date().toISOString() };
+        writeDemo(entityName, items);
+        return items[index];
       }
 
-      const items = getLocalData(entityName);
-      const index = items.findIndex(x => x.id === id);
-      if (index === -1) {
-        throw new Error(`Item ${id} não encontrado em ${entityName}`);
-      }
-      items[index] = { ...items[index], ...updates, atualizado_em: new Date().toISOString() };
-      setLocalData(entityName, items);
-      return items[index];
+      const tenant = await requireProductionContext("update");
+      assertPayloadTenant(updates, tenant.empresaId, "update", tableName);
+      const payload = { ...updates, atualizado_em: new Date().toISOString() };
+      delete payload.empresa_id;
+      return runConfirmedWrite("update", tableName, () =>
+        database.from(tableName)
+          .update(payload)
+          .eq("id", id)
+          .eq("empresa_id", tenant.empresaId)
+          .select("*")
+          .maybeSingle()
+      );
     },
 
     async delete(id) {
-      if (isSupabaseConfigured && tableName) {
-        try {
-          await supabase.from(tableName).delete().eq("id", id);
-        } catch (e) {
-          console.warn(`[Supabase] Erro ao deletar ${entityName}:`, e);
-        }
+      if (demoIsActive()) {
+        const items = [...readDemo(entityName)];
+        const filtered = items.filter((item) => String(item.id) !== String(id));
+        if (filtered.length === items.length) return throwWriteError(null, "delete", tableName, { code: "NOT_FOUND", message: "Registro não encontrado na demonstração." });
+        writeDemo(entityName, filtered);
+        return { success: true, id, source: "demo" };
       }
 
-      const items = getLocalData(entityName);
-      const filtered = items.filter(x => x.id !== id);
-      setLocalData(entityName, filtered);
-      return { success: true };
+      const tenant = await requireProductionContext("delete");
+      const deleted = await runConfirmedWrite("delete", tableName, () =>
+        database.from(tableName)
+          .delete()
+          .eq("id", id)
+          .eq("empresa_id", tenant.empresaId)
+          .select("id")
+          .maybeSingle()
+      );
+      return { success: true, id: deleted.id, source: "supabase" };
     },
   };
 }
@@ -635,34 +860,11 @@ export const base44 = {
     ConversaIA: createEntityClient("ConversaIA"),
     Configuracao: {
       async get() {
-        if (isSupabaseConfigured) {
-          try {
-            const { data, error } = await supabase
-              .from("empresas")
-              .select("*")
-              .limit(1)
-              .maybeSingle();
-            if (!error && data) {
-              return { ...getLocalData("Configuracao"), ...data };
-            }
-          } catch (e) {
-            console.warn("[Supabase] Erro ao carregar configurações da empresa:", e);
-          }
-        }
-        return getLocalData("Configuracao");
+        if (isDemoMode()) return getDemoData("Configuracao");
+        return readSupabase("empresas", () => supabase.from("empresas").select("*").limit(1).maybeSingle());
       },
       async update(updates) {
-        if (isSupabaseConfigured) {
-          try {
-            await supabase.from("empresas").upsert(updates);
-          } catch (e) {
-            console.warn("[Supabase] Erro ao salvar configurações no Supabase:", e);
-          }
-        }
-        const current = getLocalData("Configuracao");
-        const updated = { ...current, ...updates };
-        setLocalData("Configuracao", updated);
-        return updated;
+        return updateCompanyConfiguration(updates);
       },
     },
   },
@@ -925,15 +1127,22 @@ export const base44 = {
 
   resetDemoData() {
     const freshData = getFreshInitialData();
-    Object.keys(freshData).forEach((k) => {
-      setLocalData(k, freshData[k]);
+    const tenantId = getActiveTenantId();
+    demoModeTenants.add(tenantId);
+    Object.keys(freshData).forEach((entityName) => {
       try {
-        localStorage.setItem(`${STORAGE_KEY_PREFIX}${k}`, JSON.stringify(freshData[k]));
+        localStorage.setItem(`${DEMO_DATA_KEY_PREFIX}${tenantId}_${entityName}`, JSON.stringify(freshData[entityName]));
       } catch (e) {}
     });
+    try {
+      sessionStorage.setItem(`${DEMO_MODE_KEY_PREFIX}${tenantId}`, "true");
+    } catch (e) {}
+    if (typeof window !== "undefined" && typeof CustomEvent !== "undefined") {
+      window.dispatchEvent(new CustomEvent(DEMO_MODE_EVENT, { detail: { enabled: true } }));
+    }
   },
 
-  isSupabaseConnected: isSupabaseConfigured,
+  isDemoMode,
 };
 
 export const ge = base44;

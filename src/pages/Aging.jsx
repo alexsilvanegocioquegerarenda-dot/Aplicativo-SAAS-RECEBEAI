@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { formatCurrency, formatDate, calcRecebivelStatus } from "@/lib/format";
+import { getSaldoRecebivel } from "@/lib/recebiveis";
 import {
   calcAgingCarteira,
   getAgingRecebivel,
@@ -55,7 +56,7 @@ export default function Aging() {
     return recebiveis.map((r) => {
       const statusCalc = calcRecebivelStatus(r);
       const { dias, faixa: agingFaixa } = getAgingRecebivel(r);
-      const saldo = r.status === "pago" ? 0 : Math.max(0, (Number(r.valor) || 0) - (Number(r.valor_pago) || 0));
+      const saldo = getSaldoRecebivel(r);
       return {
         ...r,
         statusCalc,

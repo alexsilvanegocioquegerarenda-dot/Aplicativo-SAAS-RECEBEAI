@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { getGreeting, formatCurrency, formatDate, daysBetween } from "@/lib/format";
+import { getSaldoRecebivel } from "@/lib/recebiveis";
 import AgingTabela from "@/components/AgingTabela";
 import { getDSOPeriodos, calcularDSOPeriodo } from "@/lib/dso";
 import {
@@ -27,21 +28,11 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
-      let [c, r, p] = await Promise.all([
+      const [c, r, p] = await Promise.all([
         base44.entities.Cliente.list(),
         base44.entities.Recebivel.list(),
         base44.entities.Promessa.list(),
       ]);
-
-      // Se a carteira estiver vazia, restaura automaticamente os dados de demonstração
-      if ((!c || c.length === 0) && (!r || r.length === 0)) {
-        base44.resetDemoData();
-        [c, r, p] = await Promise.all([
-          base44.entities.Cliente.list(),
-          base44.entities.Recebivel.list(),
-          base44.entities.Promessa.list(),
-        ]);
-      }
 
       setClientes(c || []);
       setRecebiveis(r || []);
@@ -66,11 +57,10 @@ export default function Dashboard() {
   // Cálculos consolidados
   const recebiveisEnriched = recebiveis.map((r) => {
     const dias = daysBetween(r.vencimento);
-    const saldo = (Number(r.valor) || 0) - (Number(r.valor_pago) || 0);
     return {
       ...r,
       dias,
-      saldo: r.status === "pago" ? 0 : saldo,
+      saldo: getSaldoRecebivel(r),
     };
   });
 
@@ -100,7 +90,7 @@ export default function Dashboard() {
         ...c,
         totalAtrasado,
         maiorAtraso,
-        qtdTitulos: recs.length,
+        qtdTitulos: vencidos.length,
       };
     })
     .filter((c) => c.totalAtrasado > 0)

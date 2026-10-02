@@ -1,4 +1,7 @@
 // Utilitários de cálculo de DSO (Days Sales Outstanding - Prazo Médio de Recebimento)
+import { getSaldoRecebivel } from "./recebiveis.js";
+
+export { getSaldoRecebivel } from "./recebiveis.js";
 
 function parseDate(dateStr) {
   if (!dateStr) return null;
@@ -10,11 +13,6 @@ function isDateInRange(dateStr, startStr, endStr) {
   if (!dateStr) return false;
   const target = dateStr.slice(0, 10);
   return target >= startStr && target <= endStr;
-}
-
-export function getSaldoRecebivel(r) {
-  if (r.status === "pago") return 0;
-  return Math.max(0, (Number(r.valor) || 0) - (Number(r.valor_pago) || 0));
 }
 
 export function getDiasEntre(dataInicio, dataFim) {

@@ -34,6 +34,7 @@ export default function Cadastro() {
   });
 
   const [erro, setErro] = useState("");
+  const [aviso, setAviso] = useState("");
   const [carregando, setCarregando] = useState(false);
 
   const planosOpcoes = [
@@ -64,6 +65,7 @@ export default function Cadastro() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErro("");
+    setAviso("");
 
     if (!formData.razaoSocial.trim()) {
       setErro("Informe a Razão Social ou Nome Fantasia da sua empresa.");
@@ -88,12 +90,14 @@ export default function Cadastro() {
       const res = await register(formData);
       if (res.success) {
         navigate("/dashboard");
+      } else if (res.pendingConfirmation) {
+        setAviso(res.message);
       } else {
-        setErro("Não foi possível criar a conta. Tente novamente.");
+        setErro(res.message || "Não foi possível criar a conta. Tente novamente.");
       }
     } catch (err) {
       console.error(err);
-      setErro("Ocorreu um erro ao criar a empresa. Tente novamente.");
+      setErro(err.message || "Ocorreu um erro ao criar a empresa. Tente novamente.");
     } finally {
       setCarregando(false);
     }
@@ -140,6 +144,11 @@ export default function Cadastro() {
             <div className="mb-6 flex items-center gap-2.5 rounded-2xl bg-red-500/10 p-4 border border-red-500/20 text-xs text-red-300">
               <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
               <span>{erro}</span>
+            </div>
+          )}
+          {aviso && (
+            <div role="status" className="mb-6 rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4 text-xs text-blue-200">
+              {aviso}
             </div>
           )}
 

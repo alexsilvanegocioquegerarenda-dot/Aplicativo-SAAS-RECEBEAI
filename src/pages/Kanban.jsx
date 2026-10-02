@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { formatCurrency, formatDate, calcRecebivelStatus } from "@/lib/format";
 import { getAgingRecebivel, agingFaixaConfig } from "@/lib/aging";
+import { getSaldoRecebivel } from "@/lib/recebiveis";
 import {
   Clock,
   AlertTriangle,
@@ -116,7 +117,8 @@ export default function Kanban() {
     recebiveis.forEach((r) => {
       const statusCalc = calcRecebivelStatus(r);
       const { dias, faixa: faixaAging } = getAgingRecebivel(r);
-      const saldo = r.status === "pago" ? 0 : Math.max(0, (Number(r.valor) || 0) - (Number(r.valor_pago) || 0));
+      const saldo = getSaldoRecebivel(r);
+      const valorExibicao = r.status === "pago" ? Number(r.valor) || 0 : saldo;
       const clienteNome = r.cliente_nome || clientesMap[r.cliente_id]?.nome || "Cliente";
 
       // Filtro de busca
@@ -143,7 +145,8 @@ export default function Kanban() {
         ...r,
         statusCalc,
         dias,
-        saldo: r.status === "pago" ? Number(r.valor) : saldo,
+        saldo,
+        valorExibicao,
         faixaAging,
         clienteNome,
       });
@@ -151,7 +154,7 @@ export default function Kanban() {
 
     // Ordena cada coluna por maior saldo
     Object.keys(grupos).forEach((col) => {
-      grupos[col].sort((a, b) => b.saldo - a.saldo);
+      grupos[col].sort((a, b) => b.valorExibicao - a.valorExibicao);
     });
 
     return grupos;
@@ -220,7 +223,7 @@ export default function Kanban() {
         <div className="grid min-w-[1080px] grid-cols-4 gap-5">
           {KANBAN_STAGES.map((coluna) => {
             const cards = colunas[coluna.id] || [];
-            const saldoTotal = cards.reduce((acc, c) => acc + c.saldo, 0);
+            const saldoTotal = cards.reduce((acc, c) => acc + c.valorExibicao, 0);
             const Icon = coluna.icon;
 
             return (
@@ -282,7 +285,7 @@ export default function Kanban() {
                               {item.clienteNome}
                             </Link>
                             <span className="shrink-0 font-heading text-sm font-bold text-slate-900">
-                              {formatCurrency(item.saldo)}
+                              {formatCurrency(item.valorExibicao)}
                             </span>
                           </div>
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { formatCurrency, formatDate, daysBetween, statusColors, statusLabels } from "@/lib/format";
+import { getSaldoRecebivel } from "@/lib/recebiveis";
 import {
   Receipt,
   Plus,
@@ -108,7 +109,7 @@ export default function Recebiveis() {
   const titulosEnriched = recebiveis.map((r) => {
     const cli = clientes.find((c) => String(c.id) === String(r.cliente_id));
     const dias = daysBetween(r.vencimento);
-    const saldo = (Number(r.valor) || 0) - (Number(r.valor_pago) || 0);
+    const saldo = getSaldoRecebivel(r);
 
     return {
       ...r,

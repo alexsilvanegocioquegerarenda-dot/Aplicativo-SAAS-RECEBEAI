@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { formatCurrency, riscoColors } from "@/lib/format";
+import { formatCurrency, riscoColors, daysBetween } from "@/lib/format";
+import { getSaldoRecebivel } from "@/lib/recebiveis";
 import {
   Users,
   Search,
@@ -73,8 +74,8 @@ export default function Clientes() {
     const recs = recebiveis.filter((r) => String(r.cliente_id) === String(c.id));
     const valorAberto = recs
       .filter((r) => r.status !== "pago")
-      .reduce((acc, r) => acc + ((Number(r.valor) || 0) - (Number(r.valor_pago) || 0)), 0);
-    const titulosVencidos = recs.filter((r) => r.status === "atrasado").length;
+      .reduce((acc, r) => acc + getSaldoRecebivel(r), 0);
+    const titulosVencidos = recs.filter((r) => r.status !== "pago" && daysBetween(r.vencimento) > 0).length;
 
     return {
       ...c,

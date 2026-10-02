@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { formatCurrency, formatDate, daysBetween, statusColors, statusLabels, riscoColors } from "@/lib/format";
+import { getSaldoRecebivel } from "@/lib/recebiveis";
 import AgingTabela from "@/components/AgingTabela";
 import {
   ArrowLeft,
@@ -71,11 +72,10 @@ export default function ClienteDetalhes() {
   const recebiveisEnriched = useMemo(() => {
     return recebiveis.map((r) => {
       const dias = daysBetween(r.vencimento);
-      const saldo = r.status === "pago" ? 0 : Math.max(0, (Number(r.valor) || 0) - (Number(r.valor_pago) || 0));
       return {
         ...r,
         dias,
-        saldo,
+        saldo: getSaldoRecebivel(r),
       };
     });
   }, [recebiveis]);
