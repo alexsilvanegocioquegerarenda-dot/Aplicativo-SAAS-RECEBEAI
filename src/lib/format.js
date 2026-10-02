@@ -1,3 +1,5 @@
+import { getAgingDays } from "./aging.js";
+
 export function formatCurrency(value) {
   const num = Number(value) || 0;
   return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -10,14 +12,8 @@ export function formatDate(dateStr) {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-export function daysBetween(dateStr) {
-  if (!dateStr) return 0;
-  const d = new Date(dateStr);
-  if (isNaN(d)) return 0;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  d.setHours(0, 0, 0, 0);
-  return Math.floor((today - d) / 86400000);
+export function daysBetween(dateStr, referenceDate = new Date()) {
+  return getAgingDays(dateStr, referenceDate);
 }
 
 export function calcRecebivelStatus(recebivel) {

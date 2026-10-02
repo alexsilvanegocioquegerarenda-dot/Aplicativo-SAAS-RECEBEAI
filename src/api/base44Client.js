@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from "./supabaseClient.js";
+import { getAgingDays } from "../lib/aging.js";
 
 const STORAGE_KEY_PREFIX = "recebeai_data_";
 
@@ -682,14 +683,7 @@ export const base44 = {
         const nf = rec?.nota_fiscal || "NF-Pendente";
         const chavePix = cfg?.chave_pix || "financeiro@recebeai.com.br";
 
-        let dias = 0;
-        if (rec?.vencimento) {
-          const hoje = new Date();
-          hoje.setHours(0, 0, 0, 0);
-          const v = new Date(rec.vencimento);
-          v.setHours(0, 0, 0, 0);
-          dias = Math.max(0, Math.floor((hoje - v) / 86400000));
-        }
+        const dias = Math.max(0, getAgingDays(rec?.vencimento));
 
         let mensagem = "";
         if (dias > 30) {
@@ -712,9 +706,6 @@ export const base44 = {
         const mapaClientes = {};
         clientes.forEach((c) => (mapaClientes[c.id] = c));
 
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-
         let gerados = 0;
         let analisados = 0;
 
@@ -722,9 +713,7 @@ export const base44 = {
           if (rec.status === "pago") continue;
           if (!rec.vencimento) continue;
 
-          const venc = new Date(rec.vencimento);
-          venc.setHours(0, 0, 0, 0);
-          const diasAtraso = Math.floor((hoje - venc) / 86400000);
+          const diasAtraso = getAgingDays(rec.vencimento);
 
           if (diasAtraso <= 0) continue;
           analisados++;
@@ -784,9 +773,6 @@ export const base44 = {
         let medias = 0;
         let baixas = 0;
 
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-
         for (const cliente of clientes) {
           const recsCliente = recebiveis.filter(
             (r) => String(r.cliente_id) === String(cliente.id) && r.status !== "pago"
@@ -798,12 +784,8 @@ export const base44 = {
 
           let maiorAtraso = 0;
           recsCliente.forEach((r) => {
-            if (r.vencimento) {
-              const v = new Date(r.vencimento);
-              v.setHours(0, 0, 0, 0);
-              const d = Math.floor((hoje - v) / 86400000);
-              if (d > maiorAtraso) maiorAtraso = d;
-            }
+            const dias = getAgingDays(r.vencimento);
+            if (dias > maiorAtraso) maiorAtraso = dias;
           });
 
           const promessasQuebradas = promessas.filter(
@@ -860,23 +842,16 @@ export const base44 = {
         const clientes = await base44.entities.Cliente.list();
         const promessas = await base44.entities.Promessa.list();
 
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-
         const mapaClientes = {};
         clientes.forEach((c) => (mapaClientes[c.id] = c));
 
         const vencidos = recebiveis
           .filter((r) => {
             if (r.status === "pago") return false;
-            const v = new Date(r.vencimento);
-            v.setHours(0, 0, 0, 0);
-            return Math.floor((hoje - v) / 86400000) > 0;
+            return getAgingDays(r.vencimento) > 0;
           })
           .map((r) => {
-            const v = new Date(r.vencimento);
-            v.setHours(0, 0, 0, 0);
-            const dias = Math.floor((hoje - v) / 86400000);
+            const dias = getAgingDays(r.vencimento);
             const saldo = (Number(r.valor) || 0) - (Number(r.valor_pago) || 0);
             return { ...r, dias, saldo, cliente: mapaClientes[r.cliente_id] };
           })
@@ -916,9 +891,7 @@ export const base44 = {
           const aReceber = recebiveis
             .filter((r) => {
               if (r.status === "pago") return false;
-              const v = new Date(r.vencimento);
-              v.setHours(0, 0, 0, 0);
-              const dif = Math.floor((v - hoje) / 86400000);
+              const dif = -getAgingDays(r.vencimento);
               return dif >= 0 && dif <= 30;
             })
             .reduce((acc, r) => acc + ((Number(r.valor) || 0) - (Number(r.valor_pago) || 0)), 0);

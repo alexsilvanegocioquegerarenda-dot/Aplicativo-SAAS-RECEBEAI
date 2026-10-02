@@ -1,5 +1,6 @@
 // Test QA Suite for RecebeAi SaaS
-import { calcAgingFaixa } from './src/lib/aging.js';
+import assert from 'node:assert/strict';
+import { AGING_FAIXAS_KEYS, calcAgingCarteira, calcAgingFaixa, getAgingDays } from './src/lib/aging.js';
 import { formatCurrency, daysBetween, calcRecebivelStatus } from './src/lib/format.js';
 import { MERCADO_PAGO_PLANS } from './src/lib/mercadoPago.js';
 
@@ -28,10 +29,57 @@ const statusFuturo = calcRecebivelStatus({ vencimento: formatYMD(dFutura), statu
 const statusOntem = calcRecebivelStatus({ vencimento: formatYMD(dOntem), status: 'atrasado' });
 const faixaOntem = calcAgingFaixa(daysBetween(formatYMD(dOntem)));
 const faixa45 = calcAgingFaixa(daysBetween(formatYMD(d45DiasAtras)));
+assert.equal(statusFuturo, 'em_dia');
+assert.equal(statusOntem, 'atrasado');
+assert.equal(faixaOntem, '01_30');
+assert.equal(faixa45, '31_60');
 
 console.log(`- Título a vencer (10 dias): ${statusFuturo} -> ${statusFuturo === 'em_dia' ? '✅ OK' : '❌ ERRO'}`);
-console.log(`- Título vencido (5 dias): ${statusOntem} | Faixa: ${faixaOntem} -> ${faixaOntem === 'ate_30' ? '✅ OK' : '❌ ERRO'}`);
+console.log(`- Título vencido (5 dias): ${statusOntem} | Faixa: ${faixaOntem} -> ✅ OK`);
 console.log(`- Título vencido (45 dias): Faixa: ${faixa45} -> ${faixa45 === '31_60' ? '✅ OK' : '❌ ERRO'}`);
+
+const dataReferencia = '2026-10-01';
+const diasParaVencimento = (dias) => {
+	const data = new Date(`${dataReferencia}T00:00:00Z`);
+	data.setUTCDate(data.getUTCDate() - dias);
+	return data.toISOString().slice(0, 10);
+};
+const limitesAging = [
+	[0, 'current'],
+	[-1, 'current'],
+	[1, '01_30'],
+	[30, '01_30'],
+	[31, '31_60'],
+	[60, '31_60'],
+	[61, '61_90'],
+	[90, '61_90'],
+	[91, '91_180'],
+	[180, '91_180'],
+	[181, '181_365'],
+	[365, '181_365'],
+	[366, '366_720'],
+	[720, '366_720'],
+	[721, 'acima_720'],
+];
+assert.deepEqual(AGING_FAIXAS_KEYS, ['current', '01_30', '31_60', '61_90', '91_180', '181_365', '366_720', 'acima_720']);
+for (const [diasEsperados, faixaEsperada] of limitesAging) {
+	const diasCalculados = getAgingDays(diasParaVencimento(diasEsperados), dataReferencia);
+	assert.equal(diasCalculados, diasEsperados);
+	assert.equal(calcAgingFaixa(diasCalculados), faixaEsperada);
+}
+const agingAgregado = calcAgingCarteira(
+	limitesAging.map(([dias], index) => ({
+		status: 'aberto',
+		valor: 100,
+		vencimento: diasParaVencimento(dias),
+		cliente_id: `cliente-${index}`,
+	})),
+	dataReferencia
+);
+assert.deepEqual(agingAgregado.map(({ faixa }) => faixa), AGING_FAIXAS_KEYS);
+assert.equal(agingAgregado.reduce((total, item) => total + item.valor, 0), 1500);
+console.log('- Limites de todas as faixas e ordem oficial validados -> ✅ OK');
+console.log('- Agregação preserva a ordem e o total da carteira -> ✅ OK');
 
 // 3. Teste do Cálculo de DSO (Days Sales Outstanding)
 console.log("\n3. Validando Cálculo de DSO da Carteira:");

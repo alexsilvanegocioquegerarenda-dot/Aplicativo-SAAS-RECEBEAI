@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { formatCurrency, formatDate, daysBetween, calcRecebivelStatus } from "@/lib/format";
+import { formatCurrency, formatDate, calcRecebivelStatus } from "@/lib/format";
 import {
   calcAgingCarteira,
-  calcAgingFaixa,
-  agingFaixaConfig,
-  AGING_FAIXAS_KEYS
+  getAgingRecebivel,
+  agingFaixaConfig
 } from "@/lib/aging";
 import {
   Clock,
@@ -55,9 +54,8 @@ export default function Aging() {
   const recebiveisEnriched = useMemo(() => {
     return recebiveis.map((r) => {
       const statusCalc = calcRecebivelStatus(r);
-      const dias = daysBetween(r.vencimento);
+      const { dias, faixa: agingFaixa } = getAgingRecebivel(r);
       const saldo = r.status === "pago" ? 0 : Math.max(0, (Number(r.valor) || 0) - (Number(r.valor_pago) || 0));
-      const agingFaixa = calcAgingFaixa(dias, statusCalc);
       return {
         ...r,
         statusCalc,
@@ -68,7 +66,7 @@ export default function Aging() {
     });
   }, [recebiveis]);
 
-  // Estatísticas das 7 faixas de aging
+  // Estatísticas das 8 faixas de aging
   const agingData = useMemo(() => {
     return calcAgingCarteira(recebiveisEnriched);
   }, [recebiveisEnriched]);
@@ -77,7 +75,7 @@ export default function Aging() {
   const metricas = useMemo(() => {
     const totalAberto = agingData.reduce((acc, f) => acc + f.valor, 0);
     const vencido = agingData
-      .filter((f) => f.faixa !== "a_vencer")
+      .filter((f) => f.faixa !== "current")
       .reduce((acc, f) => acc + f.valor, 0);
 
     const percentualVencido = totalAberto > 0 ? (vencido / totalAberto) * 100 : 0;
@@ -91,14 +89,14 @@ export default function Aging() {
 
     // Valores acima de 90 dias
     const acima90 = agingData
-      .filter((f) => ["91_180", "181_360", "acima_360"].includes(f.faixa))
+      .filter((f) => ["91_180", "181_365", "366_720", "acima_720"].includes(f.faixa))
       .reduce((acc, f) => acc + f.valor, 0);
 
     const percentualAcima90 = totalAberto > 0 ? (acima90 / totalAberto) * 100 : 0;
 
     // Valores acima de 180 dias
     const acima180 = agingData
-      .filter((f) => ["181_360", "acima_360"].includes(f.faixa))
+      .filter((f) => ["181_365", "366_720", "acima_720"].includes(f.faixa))
       .reduce((acc, f) => acc + f.valor, 0);
 
     const percentualAcima180 = totalAberto > 0 ? (acima180 / totalAberto) * 100 : 0;

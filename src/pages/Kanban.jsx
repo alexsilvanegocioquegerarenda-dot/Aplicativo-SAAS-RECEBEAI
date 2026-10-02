@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { formatCurrency, formatDate, daysBetween, calcRecebivelStatus } from "@/lib/format";
-import { calcAgingFaixa, agingFaixaConfig } from "@/lib/aging";
+import { formatCurrency, formatDate, calcRecebivelStatus } from "@/lib/format";
+import { getAgingRecebivel, agingFaixaConfig } from "@/lib/aging";
 import {
   Clock,
   AlertTriangle,
@@ -115,9 +115,8 @@ export default function Kanban() {
 
     recebiveis.forEach((r) => {
       const statusCalc = calcRecebivelStatus(r);
-      const dias = daysBetween(r.vencimento);
+      const { dias, faixa: faixaAging } = getAgingRecebivel(r);
       const saldo = r.status === "pago" ? 0 : Math.max(0, (Number(r.valor) || 0) - (Number(r.valor_pago) || 0));
-      const faixaAging = calcAgingFaixa(dias, statusCalc);
       const clienteNome = r.cliente_nome || clientesMap[r.cliente_id]?.nome || "Cliente";
 
       // Filtro de busca
