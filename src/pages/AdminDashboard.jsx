@@ -210,21 +210,21 @@ export default function AdminDashboard() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-heading text-xl font-bold text-slate-900 md:text-2xl">
-                  Painel do Administrador Master
+                  Painel de demonstração do administrador
                 </h1>
                 <span className="rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-bold text-amber-900">
-                  Visão Total dos Usuários
+                  Dados fictícios
                 </span>
               </div>
               <p className="mt-1 text-xs text-slate-600 leading-relaxed max-w-2xl">
-                Você está logado como <strong>{user?.email || "admin@recebeai.com.br"}</strong>. Esta visão é estritamente confidencial: os clientes assinantes do SaaS não possuem acesso a esta tela nem às suas credenciais.
+                Os dados exibidos são exemplos locais e não representam clientes, assinaturas ou faturamento reais.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 text-xs font-semibold text-amber-900 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-2xl border border-amber-200/80 shadow-sm self-start sm:self-center">
             <Lock className="h-3.5 w-3.5 text-amber-600" />
-            <span>Isolamento Total Ativo</span>
+            <span>Não usar como relatório operacional</span>
           </div>
         </div>
       </div>
@@ -453,8 +453,8 @@ export default function AdminDashboard() {
 
             <div className="mt-5 space-y-3">
               {[
-                { id: "essencial", nome: "Plano Essencial", preco: "R$ 149/mês", desc: "Até 300 clientes e R$ 100k" },
-                { id: "profissional", nome: "Plano Profissional", preco: "R$ 349/mês", desc: "Ilimitado com IA e WhatsApp API" },
+                { id: "essencial", nome: "Plano Essencial", preco: "R$ 149/mês", desc: "Organização de clientes e recebíveis" },
+                { id: "profissional", nome: "Plano Profissional", preco: "R$ 349/mês", desc: "Indicadores e organização da carteira" },
                 { id: "enterprise", nome: "Plano Enterprise", preco: "R$ 799/mês", desc: "Corporativo, multi-usuários e API" },
               ].map((p) => (
                 <button

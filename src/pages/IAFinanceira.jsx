@@ -27,7 +27,7 @@ export default function IAFinanceira() {
   const [mensagens, setMensagens] = useState([
     {
       role: "assistant",
-      text: "Olá! Sou a IA Financeira do RecebeAi. Posso analisar sua carteira em tempo real, identificar devedores de alto risco, calcular projeções de caixa e recomendar estratégias de cobrança personalizadas.\n\nEscolha uma pergunta abaixo ou digite sua dúvida!",
+      text: "Olá! Posso ajudar a consultar indicadores e organizar a análise dos seus recebíveis com base nos dados cadastrados.\n\nEscolha uma pergunta abaixo ou digite sua dúvida!",
     },
   ]);
   const [inputPergunta, setInputPergunta] = useState("");
@@ -109,13 +109,13 @@ export default function IAFinanceira() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-heading text-lg font-bold text-slate-900">IA Financeira Especializada</h1>
+              <h1 className="font-heading text-lg font-bold text-slate-900">Análise da Carteira</h1>
               <span className="rounded-md bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
-                GPT-4 Turbo Carteira
+                Análise da carteira
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              Análise instantânea de recebíveis, score de devedores e apoio a decisões de crédito
+              Respostas e recomendações baseadas em regras e nos dados cadastrados; não é um serviço de IA generativa.
             </p>
           </div>
         </div>

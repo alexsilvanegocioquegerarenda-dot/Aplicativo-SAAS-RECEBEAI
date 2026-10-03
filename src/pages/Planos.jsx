@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { base44 } from "../api/base44Client";
 import { useAuth } from "../context/AuthContext";
-import { redirecionarParaMercadoPago, getMercadoPagoCheckoutUrl } from "../lib/mercadoPago";
+import {
+  cancelMercadoPagoSubscription,
+  fetchBillingStatus,
+  requestManualBillingReview,
+  startMercadoPagoCheckout,
+} from "../lib/billing";
 import {
   Check,
   Zap,
@@ -18,57 +22,136 @@ import {
 
 export default function Planos() {
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, refreshUserProfile, demoSession } = useAuth();
   const [loadingPlano, setLoadingPlano] = useState(null);
   const [statusMessage, setStatusMessage] = useState(null);
+  const [cancelandoAssinatura, setCancelandoAssinatura] = useState(false);
+  const [canCancelSubscription, setCanCancelSubscription] = useState(false);
+  const [canRequestManualReview, setCanRequestManualReview] = useState(false);
+  const [manualReviewStatus, setManualReviewStatus] = useState(null);
+  const [mensagemRevisao, setMensagemRevisao] = useState("");
+  const [solicitandoRevisao, setSolicitandoRevisao] = useState(false);
 
   useEffect(() => {
+    let active = true;
     const status = searchParams.get("status");
-    if (status === "success") {
-      setStatusMessage({
-        type: "success",
-        title: "Assinatura realizada com sucesso!",
-        desc: "Seu plano foi atualizado. Aproveite todos os recursos avançados do RecebeAi."
-      });
-    } else if (status === "canceled") {
+    if (demoSession) {
+      if (status === "success") {
+        setStatusMessage({
+          type: "warning",
+          title: "Demonstração: nenhuma assinatura foi criada",
+          desc: "Use uma conta real e o checkout configurado para testar uma contratação.",
+        });
+      }
+      return () => { active = false; };
+    }
+
+    fetchBillingStatus().then((billing) => {
+      if (!active) return;
+      setCanCancelSubscription(billing.canCancel);
+      setCanRequestManualReview(billing.canRequestManualReview);
+      setManualReviewStatus(billing.manualReviewStatus);
+      if (billing.status === "active" && user?.subscription_status !== "active") {
+        void refreshUserProfile().catch((error) => {
+          setStatusMessage({
+            type: "warning",
+            title: "Assinatura confirmada; atualize a sessão",
+            desc: error.message || "Atualize a página para liberar o acesso ao plano.",
+          });
+        });
+      }
+      if (status === "success") {
+        const isActive = billing.status === "active";
+        setStatusMessage({
+          type: isActive ? "success" : "warning",
+          title: isActive ? "Assinatura confirmada" : "Aguardando confirmação do Mercado Pago",
+          desc: isActive
+            ? `O plano ${billing.plan} está ativo.`
+            : "O retorno do checkout, sozinho, não confirma o pagamento. O acesso será liberado após a validação do webhook.",
+        });
+      }
+    }).catch((error) => {
+      if (active) {
+        setStatusMessage({
+          type: "warning",
+          title: "Não foi possível consultar a assinatura",
+          desc: error.message,
+        });
+      }
+    });
+
+    if (status === "canceled") {
       setStatusMessage({
         type: "warning",
         title: "Checkout não concluído",
-        desc: "O processo de pagamento foi cancelado. Se tiver dúvidas, fale com nosso suporte."
+        desc: "O processo foi cancelado. Nenhum plano é ativado pelo retorno do checkout."
       });
     }
-  }, [searchParams]);
+    return () => { active = false; };
+  }, [demoSession, refreshUserProfile, searchParams, user?.subscription_status]);
 
   const handleAssinar = async (planoKey) => {
+    if (planoKey === "enterprise") return;
     try {
       setLoadingPlano(planoKey);
-      const cfg = (await base44.entities.Configuracao.get()) || {};
-      const resultado = redirecionarParaMercadoPago(planoKey, cfg, user?.email);
-
-      if (resultado && resultado.sucesso) {
-        setLoadingPlano(null);
-        return;
-      }
-
-      // Se ainda não tiver link do Mercado Pago configurado
-      const nomePlano =
-        planoKey === "enterprise"
-          ? "Enterprise (R$ 799,00)"
-          : planoKey === "profissional"
-          ? "Profissional (R$ 349,00)"
-          : "Essencial (R$ 149,00)";
-
-      setTimeout(() => {
-        setStatusMessage({
-          type: "warning",
-          title: `Plano ${nomePlano} - Mercado Pago`,
-          desc: "Link de checkout do Mercado Pago não configurado. Adicione seu link de pagamento oficial em Configurações > Mercado Pago para cobrar seus clientes no ar."
-        });
-        setLoadingPlano(null);
-      }, 700);
+      await startMercadoPagoCheckout(planoKey);
     } catch (err) {
-      console.error("Erro ao processar checkout:", err);
+      setStatusMessage({
+        type: "warning",
+        title: "Não foi possível iniciar o checkout",
+        desc: err.message || "Tente novamente ou fale com o responsável pela conta."
+      });
       setLoadingPlano(null);
+    }
+  };
+
+  const handleCancelarAssinatura = async () => {
+    if (!window.confirm("Deseja cancelar a assinatura recorrente do Mercado Pago?")) return;
+    setCancelandoAssinatura(true);
+    try {
+      await cancelMercadoPagoSubscription();
+      const updatedUser = await refreshUserProfile();
+      setCanCancelSubscription(false);
+      setStatusMessage({
+        type: "warning",
+        title: "Assinatura cancelada",
+        desc: "O Mercado Pago confirmou o cancelamento. O acesso pago foi encerrado.",
+      });
+      if (updatedUser?.subscription_status !== "canceled") {
+        throw new Error("O Mercado Pago cancelou, mas o estado da conta ainda não foi atualizado. Atualize a página antes de continuar.");
+      }
+    } catch (error) {
+      setStatusMessage({
+        type: "warning",
+        title: "Não foi possível cancelar a assinatura",
+        desc: error.message,
+      });
+    } finally {
+      setCancelandoAssinatura(false);
+    }
+  };
+
+  const handleSolicitarRevisao = async (event) => {
+    event.preventDefault();
+    setSolicitandoRevisao(true);
+    try {
+      const { review } = await requestManualBillingReview(mensagemRevisao);
+      setManualReviewStatus(review.status);
+      setCanRequestManualReview(false);
+      setMensagemRevisao("");
+      setStatusMessage({
+        type: "warning",
+        title: "Revisão solicitada",
+        desc: "A equipe responsável verificará a cobrança no Mercado Pago. Esta solicitação não ativa o plano.",
+      });
+    } catch (error) {
+      setStatusMessage({
+        type: "warning",
+        title: "Não foi possível solicitar a revisão",
+        desc: error.message,
+      });
+    } finally {
+      setSolicitandoRevisao(false);
     }
   };
 
@@ -76,18 +159,16 @@ export default function Planos() {
     {
       id: "essencial",
       nome: "Essencial",
-      descricao: "Ideal para pequenas empresas e autônomos organizarem e automatizarem suas cobranças.",
+      descricao: "Ideal para pequenas empresas e autônomos organizarem seus recebíveis.",
       preco: 149,
       destaque: false,
       recursos: [
-        "Até 300 clientes cadastrados",
-        "Até R$ 100k em recebíveis gerenciados",
-        "Pipeline Kanban de cobrança completo",
-        "Régua de cobrança preventiva e reativa (5 etapas)",
-        "Templates personalizáveis de WhatsApp e E-mail",
-        "Cálculo de Aging List e DSO em tempo real",
-        "Importação de títulos e faturas via CSV",
-        "Suporte por e-mail em até 24h úteis"
+        "Cadastro e organização de clientes",
+        "Gestão de recebíveis e vencimentos",
+        "Baixa manual de pagamentos",
+        "Visões de Aging e DSO",
+        "Importação de dados por CSV",
+        "Mensagens de cobrança preparadas para envio manual"
       ],
       cta: "Começar com Essencial",
       corBadge: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
@@ -96,18 +177,16 @@ export default function Planos() {
       id: "profissional",
       nome: "Profissional",
       badge: "Mais Popular",
-      descricao: "Solução completa com automação de IA, régua avançada e sem limites de carteira.",
+      descricao: "Ferramentas para acompanhar recebíveis, negociações e recuperação.",
       preco: 349,
       destaque: true,
       recursos: [
-        "Clientes e recebíveis ilimitados",
-        "IA Financeira para diagnóstico e insights de inadimplência",
-        "Disparo automatizado de régua via WhatsApp API",
-        "Priorização preditiva de devedores por score de risco",
-        "Relatórios consolidados de taxa de recuperação vs meta",
-        "Gestão de acordos e promessas com alertas de quebra",
-        "Histórico e auditoria completa de importações em lote",
-        "Suporte prioritário via WhatsApp com time especialista"
+        "Recursos do plano Essencial",
+        "Quadro Kanban para acompanhar cobranças e promessas",
+        "Indicadores e análises calculados a partir da carteira",
+        "Priorização orientativa de cobranças",
+        "Metas e histórico de importações",
+        "Templates de mensagens configuráveis"
       ],
       cta: "Assinar Profissional",
       corBadge: "bg-emerald-500 text-white"
@@ -116,19 +195,12 @@ export default function Planos() {
       id: "enterprise",
       nome: "Enterprise",
       badge: "Corporativo",
-      descricao: "Para médias e grandes operações que exigem escala, múltiplos acessos e integrações diretas.",
-      preco: 799,
+      descricao: "Plano ainda indisponível para contratação automática.",
+      preco: null,
       destaque: false,
       isEnterprise: true,
       recursos: [
-        "Tudo do plano Profissional incluso",
-        "Múltiplos usuários com controle de permissões por equipe",
-        "API aberta de integração direta com ERPs e Bancos",
-        "Regras de régua multicanal 100% customizadas com Webhooks",
-        "IA Financeira avançada para negociações e acordos complexos",
-        "Painel Master multi-empresas e relatórios customizados",
-        "Onboarding e treinamento exclusivo para sua equipe",
-        "Gerente de contas dedicado com SLA de suporte em até 1h"
+        "A contratação será disponibilizada após definição de escopo e condições."
       ],
       cta: "Contratar Enterprise",
       corBadge: "bg-purple-600 text-white"
@@ -137,20 +209,20 @@ export default function Planos() {
 
   const faqs = [
     {
-      q: "Posso cancelar a qualquer momento?",
-      a: "Sim, você pode cancelar sua assinatura mensal a qualquer momento sem multas, taxas adicionais ou carência."
+      q: "Como funciona o cancelamento?",
+      a: "Consulte as condições de cancelamento apresentadas no checkout antes de concluir a contratação."
     },
     {
       q: "Como funciona a cobrança?",
-      a: "O pagamento é processado com total segurança via Mercado Pago através de PIX instantâneo, cartão de crédito ou boleto bancário."
+      a: "O checkout cria uma assinatura recorrente mensal no Mercado Pago. O valor e as condições são apresentados antes da confirmação."
     },
     {
-      q: "Há período de teste gratuito?",
-      a: "Oferecemos 7 dias de garantia incondicional. Se não notar aumento na recuperação dos seus recebíveis, devolvemos 100% do valor."
+      q: "Quando meu plano será ativado?",
+      a: "O retorno do checkout não comprova pagamento. A ativação só deve ser considerada após a confirmação da cobrança."
     },
     {
       q: "Preciso de integração técnica para começar?",
-      a: "Não! Você pode começar em menos de 3 minutos importando sua planilha de clientes ou cadastrando diretamente no sistema."
+      a: "O tempo de configuração depende dos dados e da operação de cada empresa. Você pode cadastrar clientes manualmente ou importar dados por CSV."
     }
   ];
 
@@ -160,25 +232,25 @@ export default function Planos() {
       <div className="text-center space-y-4 pt-4">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 text-xs font-semibold tracking-wide uppercase">
           <Sparkles className="w-3.5 h-3.5" />
-          Planos Oficiais & Sem Surpresas
+          Planos e condições
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
           Recupere mais recebíveis com o plano certo
         </h1>
         <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-          Valores fixos mensais com checkout direto no Mercado Pago: Essencial (R$ 149), Profissional (R$ 349) e Enterprise (R$ 799).
+          Assinaturas mensais de R$ 149 (Essencial) e R$ 349 (Profissional). Confira as condições apresentadas pelo Mercado Pago antes de contratar.
         </p>
 
         {/* Badge Informativa */}
         <div className="flex items-center justify-center pt-1">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            Assinatura mensal sem fidelidade • Cancele quando quiser • 7 dias de garantia
+            O acesso é liberado somente após confirmação do Mercado Pago.
           </span>
         </div>
       </div>
 
-      {/* Banner status se veio do redirect stripe */}
+      {/* O retorno do checkout não confirma pagamento nem altera a assinatura. */}
       {statusMessage && (
         <div
           className={`p-4 rounded-xl border flex items-start gap-3 shadow-sm ${
@@ -197,6 +269,59 @@ export default function Planos() {
             <p className="text-sm opacity-90">{statusMessage.desc}</p>
           </div>
         </div>
+      )}
+
+      {manualReviewStatus === "pending" && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+          Sua solicitação de revisão manual está aguardando análise. Ela não ativa o plano automaticamente.
+        </div>
+      )}
+
+      {manualReviewStatus === "rejected" && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          A última solicitação de revisão foi encerrada sem aprovação. Se acredita que houve um erro, solicite uma nova análise.
+        </div>
+      )}
+
+      {canRequestManualReview && (
+        <form onSubmit={handleSolicitarRevisao} className="rounded-xl border border-slate-200 bg-white p-4">
+          <h2 className="font-semibold text-slate-900">Pagamento ainda não confirmado?</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Solicite uma revisão manual da assinatura pendente. A equipe verificará a cobrança no painel do Mercado Pago.
+          </p>
+          <label className="mt-3 block text-xs font-medium text-slate-700">
+            Observação ou referência do pagamento (opcional; não informe dados de cartão)
+            <textarea
+              value={mensagemRevisao}
+              onChange={(event) => setMensagemRevisao(event.target.value)}
+              maxLength={1000}
+              rows={3}
+              className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={solicitandoRevisao}
+            className="mt-3 rounded-lg bg-slate-800 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"
+          >
+            {solicitandoRevisao ? "Enviando solicitação..." : "Solicitar revisão manual"}
+          </button>
+        </form>
+      )}
+
+      {canCancelSubscription && ["active", "past_due"].includes(user?.subscription_status) && (
+        <section className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+          <p className="font-semibold">Plano atual: {user.plano}</p>
+          <p className="mt-1">Alterações de plano ainda não estão disponíveis. Você pode cancelar a assinatura recorrente abaixo.</p>
+          <button
+            type="button"
+            onClick={handleCancelarAssinatura}
+            disabled={cancelandoAssinatura}
+            className="mt-3 rounded-lg border border-blue-300 bg-white px-3 py-2 text-xs font-semibold text-blue-800 disabled:opacity-60"
+          >
+            {cancelandoAssinatura ? "Cancelando..." : "Cancelar assinatura"}
+          </button>
+        </section>
       )}
 
       {/* Cards dos Planos */}
@@ -247,11 +372,17 @@ export default function Planos() {
 
                 {/* Preço */}
                 <div className="flex items-baseline gap-1 mb-6 pb-6 border-b border-gray-100 dark:border-gray-800">
-                  <span className="text-sm text-gray-500 font-medium">R$</span>
-                  <span className="text-4xl sm:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-                    {plano.preco}
-                  </span>
-                  <span className="text-sm text-gray-500 font-medium">,00/mês</span>
+                  {plano.preco == null ? (
+                    <span className="text-xl font-bold text-gray-500">Indisponível no momento</span>
+                  ) : (
+                    <>
+                      <span className="text-sm text-gray-500 font-medium">R$</span>
+                      <span className="text-4xl sm:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                        {plano.preco}
+                      </span>
+                      <span className="text-sm text-gray-500 font-medium">,00/mês</span>
+                    </>
+                  )}
                 </div>
 
                 {/* Lista de Recursos */}
@@ -283,7 +414,7 @@ export default function Planos() {
               {/* Botão CTA */}
               <button
                 onClick={() => handleAssinar(plano.id)}
-                disabled={isLoading}
+                disabled={isLoading || plano.id === "enterprise" || ["active", "past_due"].includes(user?.subscription_status)}
                 className={`w-full py-3.5 px-6 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 shadow-sm ${
                   plano.destaque
                     ? "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-emerald-600/20"
@@ -295,11 +426,11 @@ export default function Planos() {
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Conectando ao Stripe...</span>
+                    <span>Abrindo checkout...</span>
                   </>
                 ) : (
                   <>
-                    <span>{plano.cta}</span>
+                    <span>{plano.id === "enterprise" ? "Indisponível no momento" : plano.cta}</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -318,10 +449,10 @@ export default function Planos() {
             </div>
             <div>
               <h4 className="font-semibold text-gray-900 dark:text-white text-sm">
-                Garantia de 7 Dias
+                Condições da contratação
               </h4>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Devolução integral e sem burocracia se não ficar satisfeito.
+                Confira cancelamento e reembolso no checkout antes de pagar.
               </p>
             </div>
           </div>
@@ -332,10 +463,10 @@ export default function Planos() {
             </div>
             <div>
               <h4 className="font-semibold text-gray-900 dark:text-white text-sm">
-                Pagamento 100% Seguro
+                Checkout Mercado Pago
               </h4>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Processamento criptografado de ponta a ponta com Stripe.
+                A assinatura mensal é criada no checkout seguro do Mercado Pago.
               </p>
             </div>
           </div>
@@ -346,10 +477,10 @@ export default function Planos() {
             </div>
             <div>
               <h4 className="font-semibold text-gray-900 dark:text-white text-sm">
-                Ativação Instantânea
+                Confirmação necessária
               </h4>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Seus limites e recursos de IA liberados no primeiro segundo.
+                O webhook validado do Mercado Pago controla a ativação e o cancelamento.
               </p>
             </div>
           </div>

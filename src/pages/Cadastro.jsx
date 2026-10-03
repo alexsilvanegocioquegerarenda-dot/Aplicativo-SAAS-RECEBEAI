@@ -21,7 +21,10 @@ export default function Cadastro() {
   const [searchParams] = useSearchParams();
   const { register } = useAuth();
 
-  const planoInicial = searchParams.get("plano") || "profissional";
+  const planoSolicitado = searchParams.get("plano");
+  const planoInicial = ["essencial", "profissional"].includes(planoSolicitado)
+    ? planoSolicitado
+    : "profissional";
 
   const [formData, setFormData] = useState({
     razaoSocial: "",
@@ -42,22 +45,22 @@ export default function Cadastro() {
       id: "essencial",
       nome: "Essencial",
       preco: "R$ 149/mês",
-      desc: "Até 300 clientes e R$ 100k",
+      desc: "Organização de clientes e recebíveis",
       destaque: false,
     },
     {
       id: "profissional",
       nome: "Profissional",
       preco: "R$ 349/mês",
-      desc: "Ilimitado com IA e WhatsApp API",
+      desc: "Indicadores e organização da carteira",
       destaque: true,
       badge: "Mais Escolhido",
     },
     {
       id: "enterprise",
       nome: "Enterprise",
-      preco: "R$ 799/mês",
-      desc: "Corporativo e multi-usuários",
+      preco: "Indisponível",
+      desc: "Ainda não disponível para contratação",
       destaque: false,
     },
   ];
@@ -165,8 +168,9 @@ export default function Cadastro() {
                     <button
                       type="button"
                       key={p.id}
+                      disabled={p.id === "enterprise"}
                       onClick={() => setFormData({ ...formData, plano: p.id })}
-                      className={`relative text-left p-4 rounded-2xl border transition-all ${
+                      className={`relative text-left p-4 rounded-2xl border transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
                         isSelected
                           ? "border-emerald-500 bg-emerald-500/10 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500"
                           : "border-slate-800 bg-slate-950/60 hover:border-slate-700"

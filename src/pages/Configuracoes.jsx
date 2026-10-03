@@ -1,13 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { isSupabaseConfigured, supabase, testarConexaoSupabase } from "@/api/supabaseClient";
+import { useAuth } from "@/context/AuthContext";
 import { runTenantDiagnostic } from "@/lib/tenantDiagnostic";
-import {
-  MERCADO_PAGO_PLANS,
-  redirecionarParaMercadoPago,
-  getMercadoPagoCheckoutUrl,
-  isMercadoPagoConectado
-} from "@/lib/mercadoPago";
+import { MERCADO_PAGO_PLANS } from "@/lib/mercadoPago";
+import { startMercadoPagoCheckout } from "@/lib/billing";
 import {
   Settings,
   Building2,
@@ -40,6 +37,7 @@ const diagnosticRelationshipLabels = {
 };
 
 export default function Configuracoes() {
+  const { user } = useAuth();
   const [config, setConfig] = useState({
     razao_social: "",
     cnpj: "",
@@ -51,13 +49,6 @@ export default function Configuracoes() {
     juros_mes_percentual: 1.0,
     plano_atual: "profissional",
     limite_titulos: 2000,
-    mp_public_key: "",
-    mp_access_token: "",
-    mp_link_essencial: "",
-    mp_link_profissional: "",
-    mp_link_enterprise: "",
-    mp_link_starter: "",
-    mp_link_pro: "",
   });
 
   const [loading, setLoading] = useState(true);
@@ -69,6 +60,7 @@ export default function Configuracoes() {
   const [planoCheckout, setPlanoCheckout] = useState(null);
   const [ativandoPlano, setAtivandoPlano] = useState(false);
   const [ativacaoSucesso, setAtivacaoSucesso] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
 
   // Estados de teste do Supabase
   const [testandoSupabase, setTestandoSupabase] = useState(false);
@@ -76,6 +68,7 @@ export default function Configuracoes() {
   const [executandoDiagnostico, setExecutandoDiagnostico] = useState(false);
   const [diagnosticoTenant, setDiagnosticoTenant] = useState(null);
   const [empresaTesteId, setEmpresaTesteId] = useState("");
+  const assinaturaExistente = ["active", "past_due"].includes(user?.subscription_status);
 
   const handleTestarSupabase = async () => {
     setTestandoSupabase(true);
@@ -113,7 +106,13 @@ export default function Configuracoes() {
     async function load() {
       const cfg = await base44.entities.Configuracao.get();
       if (cfg) {
-        setConfig((prev) => ({ ...prev, ...cfg }));
+        setConfig((prev) => ({
+          ...prev,
+          ...cfg,
+          telefone_empresa: cfg.telefone_empresa || cfg.telefone || "",
+          email_cobranca: cfg.email_cobranca || cfg.email || "",
+          plano_atual: cfg.plano_atual || cfg.plano || prev.plano_atual,
+        }));
       }
       setLoading(false);
     }
@@ -124,7 +123,16 @@ export default function Configuracoes() {
     e.preventDefault();
     setSalvando(true);
     try {
-      await base44.entities.Configuracao.update(config);
+      await base44.entities.Configuracao.update({
+        razao_social: config.razao_social,
+        cnpj: config.cnpj,
+        telefone: config.telefone_empresa,
+        email: config.email_cobranca,
+        chave_pix: config.chave_pix,
+        tipo_chave_pix: config.tipo_chave_pix,
+        multa_percentual: config.multa_percentual,
+        juros_mes_percentual: config.juros_mes_percentual,
+      });
       setSucesso(true);
       setTimeout(() => setSucesso(false), 3000);
     } finally {
@@ -140,6 +148,7 @@ export default function Configuracoes() {
   };
 
   const abrirCheckout = (plano) => {
+    if (plano.id === "enterprise") return;
     setPlanoCheckout(plano);
     setAtivacaoSucesso(false);
     setModalCheckoutOpen(true);
@@ -147,15 +156,19 @@ export default function Configuracoes() {
 
   const handleIrParaMercadoPago = () => {
     if (!planoCheckout) return;
-    redirecionarParaMercadoPago(planoCheckout.id, config, config.email_cobranca);
+    setAtivandoPlano(true);
+    setCheckoutError("");
+    startMercadoPagoCheckout(planoCheckout.id)
+      .catch((error) => setCheckoutError(error.message))
+      .finally(() => setAtivandoPlano(false));
   };
 
   const handleSimularAprovacao = async () => {
-    if (!planoCheckout) return;
+    if (!base44.isDemoMode() || !planoCheckout) return;
     setAtivandoPlano(true);
 
-    let novoLimite = 50;
-    if (planoCheckout.id === "pro") novoLimite = 300;
+    let novoLimite = 300;
+    if (planoCheckout.id === "profissional") novoLimite = 2000;
     if (planoCheckout.id === "enterprise") novoLimite = 99999;
 
     try {
@@ -328,106 +341,17 @@ export default function Configuracoes() {
                 </p>
               </div>
             </div>
-            {isMercadoPagoConectado(config).conectado ? (
-              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Links Conectados</span>
-              </span>
-            ) : (
-              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
-                Pendente de Configuração
-              </span>
-            )}
+            <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800">
+              Checkout server-side
+            </span>
           </div>
 
-          <div className="mt-5 space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Link de Checkout Mercado Pago - Plano Essencial (R$ 149,00/mês)
-              </label>
-              <input
-                type="url"
-                placeholder="https://mpago.la/... ou https://www.mercadopago.com.br/checkout/..."
-                value={config.mp_link_essencial || config.mp_link_starter || ""}
-                onChange={(e) =>
-                  setConfig({
-                    ...config,
-                    mp_link_essencial: e.target.value,
-                    mp_link_starter: e.target.value,
-                  })
-                }
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs focus:border-sky-500 focus:outline-none font-mono"
-              />
-              <span className="text-[11px] text-slate-400">
-                Link de pagamento direto ou assinatura gerado na sua conta Mercado Pago para o plano Essencial
-              </span>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Link de Checkout Mercado Pago - Plano Profissional (R$ 349,00/mês)
-              </label>
-              <input
-                type="url"
-                placeholder="https://mpago.la/... ou https://www.mercadopago.com.br/checkout/..."
-                value={config.mp_link_profissional || config.mp_link_pro || ""}
-                onChange={(e) =>
-                  setConfig({
-                    ...config,
-                    mp_link_profissional: e.target.value,
-                    mp_link_pro: e.target.value,
-                  })
-                }
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs focus:border-sky-500 focus:outline-none font-mono"
-              />
-              <span className="text-[11px] text-slate-400">
-                Link de pagamento direto ou assinatura gerado na sua conta Mercado Pago para o plano Profissional
-              </span>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Link de Checkout Mercado Pago - Plano Enterprise (R$ 799,00/mês)
-              </label>
-              <input
-                type="url"
-                placeholder="https://mpago.la/... ou https://www.mercadopago.com.br/checkout/..."
-                value={config.mp_link_enterprise || ""}
-                onChange={(e) => setConfig({ ...config, mp_link_enterprise: e.target.value })}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs focus:border-sky-500 focus:outline-none font-mono"
-              />
-              <span className="text-[11px] text-slate-400">
-                Link de pagamento direto ou assinatura gerado na sua conta Mercado Pago para o plano Enterprise
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Mercado Pago Public Key (Opcional - API)
-                </label>
-                <input
-                  type="text"
-                  placeholder="APP_USR-00000000-0000-0000-..."
-                  value={config.mp_public_key || ""}
-                  onChange={(e) => setConfig({ ...config, mp_public_key: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs focus:border-sky-500 focus:outline-none font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Mercado Pago Access Token (Opcional - Webhook)
-                </label>
-                <input
-                  type="password"
-                  placeholder="APP_USR-..."
-                  value={config.mp_access_token || ""}
-                  onChange={(e) => setConfig({ ...config, mp_access_token: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs focus:border-sky-500 focus:outline-none font-mono"
-                />
-              </div>
-            </div>
+          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
+            <p className="font-semibold">Assinaturas e confirmação automática</p>
+            <p className="mt-1">
+              O checkout é criado no servidor e a ativação depende do webhook validado do Mercado Pago.
+              Tokens privados são configurados somente nas variáveis de ambiente da Vercel, nunca neste painel.
+            </p>
           </div>
         </div>
 
@@ -500,20 +424,21 @@ export default function Configuracoes() {
                 <span className="text-xs text-slate-400">,00/mês</span>
               </div>
               <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Até 300 clientes cadastrados</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Até R$ 100k em recebíveis</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Pipeline Kanban completo</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Régua preventiva e reativa</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Aging List e DSO em tempo real</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Cadastro de clientes e recebíveis</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Baixa manual de pagamentos</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Visões de Aging e DSO</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Importação de dados por CSV</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-emerald-600" /> Mensagens preparadas para envio manual</li>
               </ul>
             </div>
             <button
               type="button"
               onClick={() => abrirCheckout(MERCADO_PAGO_PLANS.essencial)}
-              className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 py-2.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors shadow-sm"
+              disabled={assinaturaExistente}
+              className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 py-2.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
               <CreditCard className="h-3.5 w-3.5" />
-              <span>{(planoAtivoId === "essencial" || planoAtivoId === "starter") ? "Renovar via Mercado Pago" : "Migrar para Essencial"}</span>
+              <span>{assinaturaExistente ? "Assinatura existente" : "Abrir checkout"}</span>
             </button>
           </div>
 
@@ -533,26 +458,27 @@ export default function Configuracoes() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 mt-1">Solução completa com IA e automação</p>
+              <p className="text-xs text-slate-500 mt-1">Indicadores e organização da carteira</p>
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="text-2xl font-bold text-slate-900">R$ 349</span>
                 <span className="text-xs text-slate-400">,00/mês</span>
               </div>
               <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Clientes e faturas ilimitadas</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> IA Financeira de diagnóstico</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Régua multietapas automática</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Gestão de acordos e promessas</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Suporte prioritário via WhatsApp</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Recursos do plano Essencial</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Kanban de cobranças e promessas</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Análises calculadas sobre a carteira</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Metas e histórico de importações</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-blue-600" /> Templates de mensagens</li>
               </ul>
             </div>
             <button
               type="button"
               onClick={() => abrirCheckout(MERCADO_PAGO_PLANS.profissional)}
-              className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white hover:bg-blue-700 shadow-sm shadow-blue-600/30 transition-all"
+              disabled={assinaturaExistente}
+              className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 py-2.5 text-xs font-bold text-white hover:bg-blue-700 shadow-sm shadow-blue-600/30 transition-all disabled:cursor-not-allowed disabled:opacity-50"
             >
               <CreditCard className="h-3.5 w-3.5" />
-              <span>{(planoAtivoId === "profissional" || planoAtivoId === "pro") ? "Renovar via Mercado Pago" : "Migrar para Profissional"}</span>
+              <span>{assinaturaExistente ? "Assinatura existente" : "Abrir checkout"}</span>
             </button>
           </div>
 
@@ -569,26 +495,21 @@ export default function Configuracoes() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 mt-1">Para médias e grandes operações</p>
+              <p className="text-xs text-slate-500 mt-1">Ainda indisponível para contratação automática</p>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-slate-900">R$ 799</span>
-                <span className="text-xs text-slate-400">,00/mês</span>
+                <span className="text-base font-semibold text-slate-500">Indisponível no momento</span>
               </div>
               <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-purple-600" /> Múltiplos usuários por equipe</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-purple-600" /> API aberta e Webhooks para ERPs</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-purple-600" /> IA para negociações complexas</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-purple-600" /> Onboarding dedicado da equipe</li>
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-purple-600" /> Gerente de contas exclusivo</li>
+                <li className="flex items-center gap-2"><AlertTriangle className="h-3.5 w-3.5 text-purple-600" /> Escopo e condições ainda não definidos</li>
               </ul>
             </div>
             <button
               type="button"
-              onClick={() => abrirCheckout(MERCADO_PAGO_PLANS.enterprise)}
-              className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl bg-purple-700 py-2.5 text-xs font-bold text-white hover:bg-purple-800 transition-colors shadow-sm"
+              disabled
+              className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-200 py-2.5 text-xs font-bold text-slate-500 cursor-not-allowed"
             >
               <CreditCard className="h-3.5 w-3.5" />
-              <span>{planoAtivoId === "enterprise" ? "Renovar via Mercado Pago" : "Migrar para Enterprise"}</span>
+              <span>Indisponível no momento</span>
             </button>
           </div>
         </div>
@@ -814,7 +735,7 @@ export default function Configuracoes() {
                 </div>
                 <div>
                   <h3 className="font-heading text-base font-bold text-slate-900">Checkout Mercado Pago</h3>
-                  <p className="text-[11px] text-slate-500">Pagamento seguro e ativação imediata</p>
+                  <p className="text-[11px] text-slate-500">Assinatura mensal; ativação após confirmação do webhook</p>
                 </div>
               </div>
               <button
@@ -837,58 +758,54 @@ export default function Configuracoes() {
               </div>
             </div>
 
-            {/* Formas aceitas */}
             <div className="mt-4 space-y-2">
-              <span className="text-xs font-semibold text-slate-700">Formas de Pagamento Aceitas:</span>
-              <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
-                <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-2 font-medium text-slate-700">
-                  ⚡ PIX Imediato
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-2 font-medium text-slate-700">
-                  💳 Cartão até 12x
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-2 font-medium text-slate-700">
-                  📄 Boleto
-                </div>
-              </div>
+              <span className="text-xs text-slate-600">
+                As formas de pagamento disponíveis serão informadas pelo Mercado Pago no checkout.
+              </span>
             </div>
 
             {ativacaoSucesso ? (
               <div className="mt-5 flex items-center gap-2.5 rounded-2xl bg-emerald-50 p-4 border border-emerald-200 text-xs font-semibold text-emerald-800">
                 <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                 <div>
-                  <p className="font-bold">Plano {planoCheckout.nome} ativado com sucesso!</p>
-                  <p className="text-[11px] font-normal text-emerald-700">Seus novos limites e recursos já estão liberados.</p>
+                  <p className="font-bold">Demonstração do plano {planoCheckout.nome} atualizada</p>
+                  <p className="text-[11px] font-normal text-emerald-700">Nenhuma cobrança ou assinatura real foi criada.</p>
                 </div>
               </div>
             ) : (
               <div className="mt-6 space-y-2.5">
+                {checkoutError && (
+                  <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+                    {checkoutError}
+                  </p>
+                )}
                 {/* Botão de Redirecionamento Oficial */}
                 <button
                   type="button"
                   onClick={handleIrParaMercadoPago}
+                  disabled={ativandoPlano}
                   className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#009EE3] py-3.5 text-xs font-bold text-white hover:bg-[#0089c7] shadow-md shadow-sky-500/25 transition-all"
                 >
-                  <span>Pagar com Mercado Pago</span>
+                  <span>{ativandoPlano ? "Preparando checkout..." : "Assinar com Mercado Pago"}</span>
                   <ExternalLink className="h-4 w-4" />
                 </button>
 
                 {/* Opção para Testes / Simulação de Aprovação */}
-                <button
+                {base44.isDemoMode() && <button
                   type="button"
                   onClick={handleSimularAprovacao}
                   disabled={ativandoPlano}
                   className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
                 >
                   <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-                  <span>{ativandoPlano ? "Ativando plano..." : "Simular Aprovação Imediata (Modo Teste)"}</span>
-                </button>
+                  <span>{ativandoPlano ? "Atualizando demonstração..." : "Simular alteração (somente demonstração)"}</span>
+                </button>}
               </div>
             )}
 
             <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
               <Lock className="h-3 w-3" />
-              <span>Transação protegida e criptografada pelo Mercado Pago</span>
+              <span>A contratação é processada no checkout do Mercado Pago.</span>
             </div>
           </div>
         </div>

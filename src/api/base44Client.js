@@ -590,7 +590,6 @@ export function getFreshInitialData() {
       plano_atual: "profissional",
       limite_titulos: 2000,
       mp_public_key: "",
-      mp_access_token: "",
       mp_link_essencial: "",
       mp_link_profissional: "",
       mp_link_enterprise: "",
@@ -634,6 +633,17 @@ export function disableDemoMode() {
   if (typeof window !== "undefined" && typeof CustomEvent !== "undefined") {
     window.dispatchEvent(new CustomEvent(DEMO_MODE_EVENT, { detail: { enabled: false } }));
   }
+}
+
+export function clearDemoData() {
+  if (typeof localStorage === "undefined") return 0;
+  const demoKeys = [];
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index);
+    if (key?.startsWith(DEMO_DATA_KEY_PREFIX)) demoKeys.push(key);
+  }
+  demoKeys.forEach((key) => localStorage.removeItem(key));
+  return demoKeys.length;
 }
 
 function getDemoData(entityName) {
@@ -1112,15 +1122,6 @@ export const base44 = {
         return { data: { resposta } };
       }
 
-      if (functionName === "criarCheckoutStripe") {
-        const plano = args.plano || "pro";
-        return {
-          data: {
-            url: `/planos?status=success&plano=${plano}`,
-          },
-        };
-      }
-
       return { data: { success: true } };
     },
   },
@@ -1146,4 +1147,3 @@ export const base44 = {
 };
 
 export const ge = base44;
-

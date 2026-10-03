@@ -23,6 +23,7 @@ import Templates from './pages/Templates';
 import IAFinanceira from './pages/IAFinanceira';
 import Recuperacao from './pages/Recuperacao';
 import Planos from './pages/Planos';
+import AdminPagamentos from './pages/AdminPagamentos';
 
 export default function App() {
   return (
@@ -60,6 +61,7 @@ export default function App() {
                     <Route path="/relatorios" element={<Recuperacao />} />
                     <Route path="/configuracoes" element={<Configuracoes />} />
                     <Route path="/planos" element={<Planos />} />
+                    <Route path="/admin/pagamentos" element={<AdminPagamentos />} />
 
                     {/* Rota estritamente restrita ao Administrador Master */}
                     <Route

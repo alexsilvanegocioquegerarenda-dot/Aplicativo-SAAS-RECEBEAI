@@ -330,7 +330,7 @@ export default function Importacoes() {
           <FileSpreadsheet className="mx-auto h-12 w-12 text-slate-300" />
           <h3 className="mt-4 text-base font-semibold text-slate-900">Nenhum lote importado ainda</h3>
           <p className="mt-1 text-sm text-slate-500 max-w-md mx-auto">
-            Importe planilhas CSV do seu ERP ou sistema de vendas para popular sua carteira em segundos.
+            Importe um arquivo CSV com os campos necessários e revise as linhas inválidas antes de salvar.
           </p>
           <div className="mt-6 flex items-center justify-center gap-3">
             <button

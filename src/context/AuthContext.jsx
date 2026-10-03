@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { supabase, isSupabaseConfigured } from "@/api/supabaseClient";
-import { base44, disableDemoMode } from "@/api/base44Client";
+import { base44, clearDemoData, disableDemoMode } from "@/api/base44Client";
 import { getInitialAuthState, loadCurrentSupabaseUser, registerWithSupabase, resolveAuthenticatedProfile, signInWithSupabase, signOutFromSupabase } from "@/lib/authFlows";
 
 const AuthContext = createContext(null);
@@ -115,6 +115,15 @@ export function AuthProvider({ children }) {
     setAuthError("");
     setLoadingAuth(true);
     authModeRef.current = "authenticating";
+    try {
+      clearDemoData();
+    } catch {
+      const message = "Não foi possível limpar os dados locais da demonstração. Atualize o navegador e tente novamente.";
+      setAuthError(message);
+      setLoadingAuth(false);
+      authModeRef.current = "anonymous";
+      return { success: false, message };
+    }
     if (!isSupabaseConfigured) {
       const result = { success: false, message: "Supabase não está configurado. O login real está indisponível." };
       setUser(null);
@@ -163,6 +172,15 @@ export function AuthProvider({ children }) {
     setAuthError("");
     setLoadingAuth(true);
     authModeRef.current = "authenticating";
+    try {
+      clearDemoData();
+    } catch {
+      const message = "Não foi possível limpar os dados locais da demonstração. Atualize o navegador e tente novamente.";
+      setAuthError(message);
+      setLoadingAuth(false);
+      authModeRef.current = "anonymous";
+      return { success: false, message };
+    }
     if (!isSupabaseConfigured) {
       const result = { success: false, message: "Supabase não está configurado. O cadastro real está indisponível." };
       setAuthError(result.message);
@@ -221,6 +239,14 @@ export function AuthProvider({ children }) {
     return { success: true, user: demoUser };
   };
 
+  const refreshUserProfile = async () => {
+    if (!isSupabaseConfigured) return null;
+    const result = await loadCurrentSupabaseUser(supabase.auth, resolveProfile);
+    if (!result.success) throw result.error || new Error(result.message);
+    setUser(result.user);
+    return result.user;
+  };
+
   const isAdmin = demoSession && user?.role === "admin";
   const currentEmpresaId = user?.empresa_id || null;
 
@@ -229,6 +255,7 @@ export function AuthProvider({ children }) {
       value={{
         user,
         isAdmin,
+        demoSession,
         currentEmpresaId,
         loading: loadingAuth,
         loadingAuth,
@@ -237,6 +264,7 @@ export function AuthProvider({ children }) {
         login,
         register,
         logout,
+        refreshUserProfile,
         alternarPerfilDemonstracao,
       }}
     >

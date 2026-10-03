@@ -10,10 +10,23 @@ export function getInitialAuthState() {
   return { user: null, loadingAuth: true };
 }
 
-export function getProtectedRouteDecision({ loadingAuth, user, requireAdmin = false, isAdmin = false }) {
+export function getProtectedRouteDecision({
+  loadingAuth,
+  user,
+  requireAdmin = false,
+  isAdmin = false,
+  subscriptionStatus = "active",
+  pathname = "",
+}) {
   if (loadingAuth) return "loading";
   if (!user) return "login";
   if (requireAdmin && !isAdmin) return "forbidden";
+  if (
+    subscriptionStatus !== "active" &&
+    pathname !== "/planos" &&
+    pathname !== "/configuracoes" &&
+    pathname !== "/admin/pagamentos"
+  ) return "billing";
   return "allow";
 }
 
@@ -89,7 +102,7 @@ export async function registerWithSupabase(supabase, formData) {
         plano: formData.plano,
         limite_titulos: formData.plano === "enterprise" ? 999999 : formData.plano === "profissional" ? 2000 : 300,
       })
-      .select("id, razao_social, cnpj, telefone, plano")
+      .select("id, razao_social, cnpj, telefone, plano, subscription_status")
       .single();
 
     if (empresaError || !empresa?.id) {
@@ -120,6 +133,7 @@ export async function registerWithSupabase(supabase, formData) {
         cnpj: empresa.cnpj || "",
         telefone: empresa.telefone || "",
         plano: empresa.plano || formData.plano,
+        subscription_status: empresa.subscription_status || "pending",
       },
     };
   } catch (error) {
@@ -148,7 +162,7 @@ export async function resolveAuthenticatedProfile(supabase, authUser) {
 
   const { data: empresa, error } = await supabase
     .from("empresas")
-    .select("id, razao_social, cnpj, telefone, plano")
+    .select("id, razao_social, cnpj, telefone, plano, subscription_status")
     .eq("user_id", authUser.id)
     .maybeSingle();
 
@@ -166,5 +180,6 @@ export async function resolveAuthenticatedProfile(supabase, authUser) {
     cnpj: empresa.cnpj || "",
     telefone: empresa.telefone || "",
     plano: empresa.plano || "profissional",
+    subscription_status: empresa.subscription_status || "active",
   };
 }

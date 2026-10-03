@@ -16,7 +16,6 @@ import {
   Building2,
   Clock,
   Send,
-  Star,
   Check,
   Play,
   HelpCircle,
@@ -40,14 +39,12 @@ export default function LandingPage() {
       descricao: "Ideal para pequenas empresas e autônomos organizarem suas cobranças.",
       destaque: false,
       recursos: [
-        "Até 300 clientes cadastrados",
-        "Até R$ 100k em recebíveis gerenciados",
-        "Pipeline Kanban de cobrança",
-        "Régua de cobrança padrão (5 etapas)",
-        "Templates personalizáveis de WhatsApp e E-mail",
-        "Cálculo de Aging List e DSO em tempo real",
-        "Importação de títulos via planilha CSV",
-        "Suporte por e-mail em até 24h úteis",
+        "Cadastro e organização de clientes",
+        "Gestão de recebíveis e vencimentos",
+        "Baixa manual de pagamentos",
+        "Visões de Aging e DSO",
+        "Importação de dados por CSV",
+        "Mensagens de cobrança preparadas para envio manual",
       ],
       cta: "Começar com Essencial",
     },
@@ -56,17 +53,15 @@ export default function LandingPage() {
       nome: "Profissional",
       badge: "Mais Escolhido",
       preco: 349,
-      descricao: "Solução completa com automação de IA, régua avançada e sem limites operacionais.",
+      descricao: "Ferramentas para acompanhar recebíveis, negociações e recuperação.",
       destaque: true,
       recursos: [
-        "Clientes e recebíveis ilimitados",
-        "IA Financeira para diagnóstico e insights de inadimplência",
-        "Priorização preditiva de devedores por score",
-        "Disparo automatizado de régua via WhatsApp API",
-        "Relatórios consolidados de taxa de recuperação vs meta",
-        "Gestão de acordos e promessas com alertas de quebra",
-        "Histórico e auditoria de importações em lote",
-        "Suporte prioritário via WhatsApp com time especialista",
+        "Recursos do plano Essencial",
+        "Quadro Kanban para acompanhar cobranças e promessas",
+        "Indicadores e análises calculados a partir da carteira",
+        "Priorização orientativa de cobranças",
+        "Metas e histórico de importações",
+        "Templates de mensagens configuráveis",
       ],
       cta: "Assinar Profissional",
     },
@@ -74,19 +69,13 @@ export default function LandingPage() {
       id: "enterprise",
       nome: "Enterprise",
       badge: "Corporativo",
-      preco: 799,
-      descricao: "Para médias e grandes operações que exigem escala, múltiplos acessos e integrações diretas.",
+      preco: null,
+      descricao: "Plano ainda indisponível para contratação automática.",
       destaque: false,
       isEnterprise: true,
       recursos: [
-        "Tudo do plano Profissional incluso",
-        "Múltiplos usuários com controle de permissões por equipe",
-        "API aberta de integração direta com ERPs e Bancos",
-        "Regras de régua multicanal 100% customizadas com Webhooks",
-        "IA Financeira avançada para negociações e acordos complexos",
-        "Painel Master multi-empresas e relatórios customizados",
-        "Onboarding e treinamento exclusivo para sua equipe",
-        "Gerente de contas dedicado com SLA de suporte em até 1h",
+        "Escopo e disponibilidade sob avaliação",
+        "Não inclui recursos ou prazos de atendimento não confirmados",
       ],
       cta: "Contratar Enterprise",
     },
@@ -94,20 +83,20 @@ export default function LandingPage() {
 
   const faqs = [
     {
-      q: "Como funciona o isolamento multi-empresa dos meus dados?",
-      a: "Cada empresa cadastrada no RecebeAi possui um banco de dados rigorosamente segregado com Row Level Security (RLS). Nenhuma outra empresa ou usuário comum consegue visualizar seus clientes, valores ou histórico de faturas.",
+      q: "Como o acesso aos dados é controlado?",
+      a: "O banco Supabase usa políticas Row Level Security (RLS). A cobertura das políticas deve ser revisada antes do uso com dados reais de produção.",
     },
     {
       q: "Preciso de conhecimento técnico ou integração com TI para usar?",
-      a: "Não! O RecebeAi foi projetado para ser intuitivo. Em menos de 3 minutos você pode importar sua planilha de faturas em CSV ou cadastrar seus clientes manualmente e começar a cobrar.",
+      a: "O RecebeAi permite cadastrar clientes e recebíveis manualmente ou importar dados por CSV. O tempo de configuração depende dos dados e da operação de cada empresa.",
     },
     {
       q: "Como funciona a cobrança com PIX no WhatsApp?",
-      a: "O sistema gera mensagens personalizadas com o nome do cliente, o valor exato, juros calculados e a sua chave PIX para pagamento imediato. Basta um clique para enviar via WhatsApp.",
+      a: "O sistema prepara mensagens com informações do recebível e pode abrir o WhatsApp para envio manual. O pagamento é combinado diretamente entre sua empresa e o cliente; o RecebeAi não processa nem confirma a liquidação do PIX.",
     },
     {
-      q: "Como funciona a garantia de 7 dias?",
-      a: "Você pode testar qualquer plano por 7 dias. Se por qualquer motivo você não notar melhora imediata no controle ou na recuperação dos seus recebíveis, cancelamos sem taxas nem burocracia.",
+      q: "Como funciona a contratação e o cancelamento?",
+      a: "As condições de contratação, cobrança, cancelamento e eventual reembolso devem ser confirmadas antes da compra. O retorno do checkout, por si só, não confirma a ativação de uma assinatura no RecebeAi.",
     },
     {
       q: "O que é o cálculo de Aging List e DSO?",
@@ -118,14 +107,14 @@ export default function LandingPage() {
   const recursosDestaque = [
     {
       icon: MessageSquare,
-      titulo: "Régua Multicanal de Cobrança",
-      desc: "Automação preventiva (D-3, D0) e cobranças incisivas (D+3, D+10) com templates prontos para WhatsApp e E-mail.",
+      titulo: "Organização de Cobranças",
+      desc: "Acompanhe recebíveis e prepare mensagens com templates para envio manual.",
       cor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
     },
     {
       icon: Sparkles,
-      titulo: "IA Financeira Preditiva",
-      desc: "Inteligência Artificial que analisa o comportamento de pagamento e indica exatamente quem cobrar hoje para maximizar o retorno.",
+      titulo: "Análise da Carteira",
+      desc: "Consulte indicadores e recomendações calculados com base nos dados dos seus recebíveis.",
       cor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
     },
     {
@@ -143,13 +132,13 @@ export default function LandingPage() {
     {
       icon: FileSpreadsheet,
       titulo: "Importador Inteligente de CSV",
-      desc: "Traga centenas de faturas de qualquer ERP em segundos com mapeamento automático de colunas e auditoria de erros.",
+      desc: "Importe arquivos CSV e revise os resultados apresentados antes de continuar.",
       cor: "text-teal-400 bg-teal-500/10 border-teal-500/20",
     },
     {
       icon: ShieldCheck,
       titulo: "Multi-tenancy com Isolamento RLS",
-      desc: "Segurança de padrão bancário. Cada empresa opera em seu próprio compartimento isolado e criptografado.",
+      desc: "As tabelas do Supabase usam políticas RLS para restringir o acesso aos dados associados ao usuário autenticado.",
       cor: "text-rose-400 bg-rose-500/10 border-rose-500/20",
     },
   ];
@@ -184,9 +173,6 @@ export default function LandingPage() {
             <a href="#planos" className="hover:text-emerald-400 transition-colors">
               Planos & Preços
             </a>
-            <a href="#depoimentos" className="hover:text-emerald-400 transition-colors">
-              Depoimentos
-            </a>
             <a href="#faq" className="hover:text-emerald-400 transition-colors">
               FAQ
             </a>
@@ -214,7 +200,7 @@ export default function LandingPage() {
                   to="/cadastro"
                   className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 transition-all"
                 >
-                  <span>Experimentar Grátis</span>
+                  <span>Criar conta</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </>
@@ -235,21 +221,21 @@ export default function LandingPage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-emerald-500/30 text-emerald-400 text-xs font-semibold mb-6 shadow-inner">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Inteligência Artificial Financeira Integrada</span>
+            <span>Organização de recebíveis e cobranças</span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           </div>
 
           {/* Título Principal */}
           <h1 className="text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-[1.15] max-w-4xl mx-auto">
-            Automatize suas Cobranças. Reduza a Inadimplência em até{" "}
+            Organize suas cobranças e acompanhe os recebíveis com o{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-blue-400">
-              40% com o RecebeAi
+              RecebeAi
             </span>
           </h1>
 
           {/* Subtítulo */}
           <p className="mt-6 text-base sm:text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed">
-            A solução completa para pequenas e médias empresas recuperarem faturas atrasadas, calcularem Aging List e DSO em tempo real e dispararem cobranças no WhatsApp com chave PIX sem atrito.
+            Organize clientes, recebíveis e cobranças com indicadores de Aging e DSO, importação CSV e mensagens preparadas para envio manual.
           </p>
 
           {/* Botões CTA */}
@@ -259,7 +245,7 @@ export default function LandingPage() {
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-sm shadow-xl shadow-emerald-500/25 hover:shadow-emerald-500/35 transition-all transform hover:-translate-y-0.5"
             >
               <Zap className="w-4 h-4" />
-              <span>Começar Teste Grátis de 7 Dias</span>
+              <span>Conhecer a plataforma</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
 
@@ -276,15 +262,15 @@ export default function LandingPage() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400">
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Sem fidelidade obrigatória</span>
+              <span>Veja as condições antes de contratar</span>
             </div>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Isolamento Multi-empresa RLS</span>
+              <span>Controle de acesso com políticas RLS</span>
             </div>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Ativação Instantânea</span>
+              <span>Assinatura mensal; acesso após confirmação do pagamento</span>
             </div>
           </div>
         </div>
@@ -459,7 +445,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-base font-bold text-white mb-2">Importe sua Carteira</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Faça o upload do seu arquivo CSV ou cadastre clientes manualmente. O sistema classifica prazos, valores e níveis de risco automaticamente.
+                Cadastre clientes manualmente ou importe um CSV com os campos necessários. Confira os dados antes de salvar.
               </p>
             </div>
 
@@ -467,9 +453,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-full bg-blue-500/20 text-blue-400 font-extrabold text-xl flex items-center justify-center mx-auto mb-4 border border-blue-500/30">
                 2
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Ative a Régua e a IA</h3>
+              <h3 className="text-base font-bold text-white mb-2">Organize sua rotina de cobrança</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                A régua inteligente dispara lembretes preventivos antes do vencimento e cobranças personalizadas pós-vencimento via WhatsApp.
+                Acompanhe vencimentos e prepare mensagens personalizadas para enviar pelos canais da sua empresa.
               </p>
             </div>
 
@@ -477,9 +463,9 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-full bg-purple-500/20 text-purple-400 font-extrabold text-xl flex items-center justify-center mx-auto mb-4 border border-purple-500/30">
                 3
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Liquidação via PIX</h3>
+              <h3 className="text-base font-bold text-white mb-2">Informe seus dados de pagamento</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                O devedor recebe a chave PIX e o valor já atualizado no celular. Ele paga instantaneamente e seu saldo é recuperado no mesmo dia.
+                Inclua sua chave PIX na mensagem de cobrança. O recebimento e a confirmação do pagamento são feitos pela sua empresa.
               </p>
             </div>
           </div>
@@ -494,14 +480,14 @@ export default function LandingPage() {
             Escolha o plano ideal para a escala da sua empresa
           </h2>
           <p className="mt-3 text-sm sm:text-base text-slate-400">
-            Comece hoje com 7 dias de garantia incondicional. Sem contratos de longo prazo nem letras miúdas.
+            Consulte as condições de contratação antes de escolher um plano.
           </p>
 
           {/* Selo Informativo de Preços Fixos */}
           <div className="flex items-center justify-center mt-6">
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-slate-300 font-semibold shadow-sm">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              Preços fixos mensais sem pegadinhas • Cancele quando quiser • 7 dias de garantia
+              Confira preço, forma de cobrança e condições antes de contratar
             </span>
           </div>
         </div>
@@ -543,13 +529,19 @@ export default function LandingPage() {
                   </p>
 
                   {/* Preço */}
-                  <div className="flex items-baseline gap-1 mb-6 pb-6 border-b border-slate-800">
-                    <span className="text-sm text-slate-400 font-medium">R$</span>
-                    <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
-                      {plano.preco}
-                    </span>
-                    <span className="text-sm text-slate-400 font-medium">,00/mês</span>
-                  </div>
+                    <div className="flex items-baseline gap-1 mb-6 pb-6 border-b border-slate-800">
+                      {plano.preco == null ? (
+                        <span className="text-2xl font-bold text-white">Indisponível no momento</span>
+                      ) : (
+                        <>
+                          <span className="text-sm text-slate-400 font-medium">R$</span>
+                          <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
+                            {plano.preco}
+                          </span>
+                          <span className="text-sm text-slate-400 font-medium">,00/mês</span>
+                        </>
+                      )}
+                    </div>
 
                   {/* Recursos */}
                   <div className="space-y-3 mb-8">
@@ -578,106 +570,34 @@ export default function LandingPage() {
                 </div>
 
                 {/* Botão de Contratação */}
-                <Link
-                  to={`/cadastro?plano=${plano.id}`}
-                  className={`w-full py-3.5 px-6 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-sm ${
+                {plano.id === "enterprise" ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full py-3.5 px-6 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 bg-slate-800 text-slate-400 cursor-not-allowed"
+                  >
+                    <span>Indisponível no momento</span>
+                  </button>
+                ) : (
+                  <Link
+                    to={`/cadastro?plano=${plano.id}`}
+                    className={`w-full py-3.5 px-6 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-sm ${
                     plano.destaque
                       ? "bg-emerald-500 hover:bg-emerald-400 text-white shadow-emerald-500/25"
-                      : plano.isEnterprise
-                      ? "bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/25"
                       : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700"
-                  }`}
-                >
-                  <span>{plano.cta}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
+                    }`}
+                  >
+                    <span>{plano.cta}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                )}
               </div>
             );
           })}
         </div>
       </section>
 
-      {/* 8. DEPOIMENTOS */}
-      <section id="depoimentos" className="py-20 bg-slate-900/40 border-y border-slate-800/80">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <div className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">Depoimentos Reais</div>
-            <h2 className="text-3xl font-extrabold text-white tracking-tight">
-              Quem usa o RecebeAi não perde mais o sono com inadimplência
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-3xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
-              <div>
-                <div className="flex text-amber-400 gap-1 mb-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400" />
-                  ))}
-                </div>
-                <p className="text-xs text-slate-300 leading-relaxed italic mb-4">
-                  "Tínhamos R$ 42 mil parados em faturas atrasadas há mais de 30 dias. Com a régua automática no WhatsApp e a chave PIX, recuperamos R$ 28 mil na primeira semana!"
-                </p>
-              </div>
-              <div className="flex items-center gap-3 pt-3 border-t border-slate-800/80">
-                <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                  RS
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-white">Rodrigo Silveira</div>
-                  <div className="text-[10px] text-slate-400">Diretor, Silveira Materiais Elétricos</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-3xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
-              <div>
-                <div className="flex text-amber-400 gap-1 mb-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400" />
-                  ))}
-                </div>
-                <p className="text-xs text-slate-300 leading-relaxed italic mb-4">
-                  "O cálculo do Aging e a IA Financeira nos mostram exatamente quem tem risco alto antes mesmo de vender. Nosso DSO caiu de 52 dias para 31 dias."
-                </p>
-              </div>
-              <div className="flex items-center gap-3 pt-3 border-t border-slate-800/80">
-                <div className="w-9 h-9 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs">
-                  CP
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-white">Camila Prado</div>
-                  <div className="text-[10px] text-slate-400">Gestora Financeira, Delta Consultoria</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-3xl bg-slate-950 border border-slate-800 flex flex-col justify-between">
-              <div>
-                <div className="flex text-amber-400 gap-1 mb-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400" />
-                  ))}
-                </div>
-                <p className="text-xs text-slate-300 leading-relaxed italic mb-4">
-                  "O pipeline Kanban de promessas de pagamento mudou nossa rotina. Não deixamos nenhum acordo cair no esquecimento e o isolamento dos dados nos dá total segurança."
-                </p>
-              </div>
-              <div className="flex items-center gap-3 pt-3 border-t border-slate-800/80">
-                <div className="w-9 h-9 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-xs">
-                  FL
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-white">Fábio Lins</div>
-                  <div className="text-[10px] text-slate-400">Sócio, Lins & Associados</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 9. FAQ INTERATIVO */}
+      {/* 8. FAQ INTERATIVO */}
       <section id="faq" className="py-24 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <div className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">Tire Suas Dúvidas</div>
@@ -725,7 +645,7 @@ export default function LandingPage() {
             Pronto para transformar cobranças em dinheiro no caixa?
           </h2>
           <p className="mt-4 text-sm sm:text-base text-slate-300 max-w-xl mx-auto">
-            Crie a conta da sua empresa em 2 minutos e comece a recuperar recebíveis hoje mesmo com inteligência e respeito ao seu cliente.
+            Crie uma conta para conhecer os recursos de organização e acompanhamento de recebíveis.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
@@ -745,7 +665,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 11. FOOTER */}
+      {/* 10. FOOTER */}
       <footer className="border-t border-slate-800/80 bg-slate-950 py-12 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">

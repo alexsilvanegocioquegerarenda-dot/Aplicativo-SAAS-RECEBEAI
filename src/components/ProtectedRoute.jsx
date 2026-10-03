@@ -8,7 +8,14 @@ import { getProtectedRouteDecision } from "@/lib/authFlows";
 export default function ProtectedRoute({ children, requireAdmin = false }) {
   const { user, isAdmin, loadingAuth } = useAuth();
   const location = useLocation();
-  const access = getProtectedRouteDecision({ loadingAuth, user, requireAdmin, isAdmin });
+  const access = getProtectedRouteDecision({
+    loadingAuth,
+    user,
+    requireAdmin,
+    isAdmin,
+    subscriptionStatus: user?.subscription_status,
+    pathname: location.pathname,
+  });
 
   if (access === "loading") {
     return (
@@ -45,6 +52,10 @@ export default function ProtectedRoute({ children, requireAdmin = false }) {
         </div>
       </div>
     );
+  }
+
+  if (access === "billing") {
+    return <Navigate to="/planos" replace state={{ reason: "subscription-required" }} />;
   }
 
   return children;

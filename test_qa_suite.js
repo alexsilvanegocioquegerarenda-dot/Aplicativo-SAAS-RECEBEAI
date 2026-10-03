@@ -1,10 +1,13 @@
 // Test QA Suite for RecebeAi SaaS
 import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { BILLING_PLANS, getMercadoPagoNotification, mapMercadoPagoSubscriptionStatus, verifyMercadoPagoSignature } from './api/_lib/billing.js';
 import { AGING_FAIXAS_KEYS, calcAgingCarteira, calcAgingFaixa, getAgingDays } from './src/lib/aging.js';
 import { formatCurrency, daysBetween, calcRecebivelStatus } from './src/lib/format.js';
 import { getSaldoRecebivel } from './src/lib/recebiveis.js';
 import { MERCADO_PAGO_PLANS } from './src/lib/mercadoPago.js';
-import { createEntityClient, resolveSupabaseRead, subscribeToDataWriteErrors, updateCompanyConfiguration, SupabaseWriteError } from './src/api/base44Client.js';
+import { clearDemoData, createEntityClient, resolveSupabaseRead, subscribeToDataWriteErrors, updateCompanyConfiguration, SupabaseWriteError } from './src/api/base44Client.js';
 import { runTenantDiagnostic } from './src/lib/tenantDiagnostic.js';
 import {
 	getInitialAuthState,
@@ -18,6 +21,61 @@ import {
 
 console.log("=== INICIANDO BATERIA DE TESTES AUTOMATIZADOS RECEBEAI ===\n");
 
+const tenantMigration = readFileSync(
+	new URL('./supabase/migrations/20261003000000_billing_lifecycle.sql', import.meta.url),
+	'utf8',
+);
+for (const constraint of [
+	'recebiveis_cliente_empresa_fkey',
+	'cobrancas_cliente_empresa_fkey',
+	'cobrancas_recebivel_empresa_fkey',
+	'promessas_cliente_empresa_fkey',
+	'promessas_recebivel_empresa_fkey',
+	'prioridades_cliente_empresa_fkey',
+]) {
+	assert.ok(tenantMigration.includes(constraint), `Migration precisa impor ${constraint}`);
+}
+for (const table of [
+	'empresas',
+	'clientes',
+	'recebiveis',
+	'cobrancas',
+	'promessas',
+	'reguas',
+	'prioridades_cobranca',
+	'importacoes',
+	'metas_recuperacao',
+	'templates_mensagem',
+	'conversas_ia',
+	'billing_subscriptions',
+	'billing_webhook_events',
+	'manual_billing_reviews',
+]) {
+	assert.ok(tenantMigration.includes(`"Tenant boundary ${table}"`), `Migration precisa restringir RLS em ${table}`);
+}
+assert.match(tenantMigration, /AS RESTRICTIVE FOR ALL TO public/);
+assert.match(tenantMigration, /Tenant isolation migration stopped:[\s\S]*no rows were deleted/);
+console.log('- RLS restritiva e relações compostas de tenant cobertas pela migration -> ✅ OK');
+
+const demoStorage = new Map([
+	['recebeai_demo_data_empresa-ficticia_Cliente', '[]'],
+	['recebeai_demo_mode_empresa-ficticia', 'true'],
+	['recebeai_auth_user', '{"id":"demo"}'],
+	['preferencia_usuario', 'tema-escuro'],
+]);
+globalThis.localStorage = {
+	get length() { return demoStorage.size; },
+	key(index) { return [...demoStorage.keys()][index] ?? null; },
+	removeItem(key) { demoStorage.delete(key); },
+};
+assert.equal(clearDemoData(), 1);
+assert.equal(demoStorage.has('recebeai_demo_data_empresa-ficticia_Cliente'), false);
+assert.equal(demoStorage.has('recebeai_demo_mode_empresa-ficticia'), true);
+assert.equal(demoStorage.has('recebeai_auth_user'), true);
+assert.equal(demoStorage.has('preferencia_usuario'), true);
+delete globalThis.localStorage;
+console.log('- Dados locais de demonstração são limpos sem alterar sessão ou preferências -> ✅ OK');
+
 // 1. Teste dos Planos e Preços
 console.log("1. Validando Valores dos Planos Comerciais:");
 const pEssencial = MERCADO_PAGO_PLANS.essencial;
@@ -26,7 +84,42 @@ const pEnterprise = MERCADO_PAGO_PLANS.enterprise;
 
 console.log(`- Essencial: R$ ${pEssencial.preco} (Esperado: 149) -> ${pEssencial.preco === 149 ? '✅ OK' : '❌ ERRO'}`);
 console.log(`- Profissional: R$ ${pProfissional.preco} (Esperado: 349) -> ${pProfissional.preco === 349 ? '✅ OK' : '❌ ERRO'}`);
-console.log(`- Enterprise: R$ ${pEnterprise.preco} (Esperado: 799) -> ${pEnterprise.preco === 799 ? '✅ OK' : '❌ ERRO'}`);
+assert.equal(pEnterprise.preco, null);
+console.log('- Enterprise permanece indisponível para contratação -> ✅ OK');
+
+const webhookDataId = '123456789';
+const webhookRequestId = 'request-123';
+const webhookSecret = 'test-secret';
+const webhookManifest = `id:${webhookDataId};request-id:${webhookRequestId};ts:1700000000;`;
+const webhookHash = createHmac('sha256', webhookSecret).update(webhookManifest).digest('hex');
+assert.deepEqual(getMercadoPagoNotification({
+	query: { 'data.id': webhookDataId, type: 'subscription_preapproval' },
+	body: {},
+	headers: { 'x-request-id': webhookRequestId, 'x-signature': `ts=1700000000,v1=${webhookHash}` },
+}), {
+	dataId: webhookDataId,
+	requestId: webhookRequestId,
+	signature: `ts=1700000000,v1=${webhookHash}`,
+	type: 'subscription_preapproval',
+});
+assert.equal(verifyMercadoPagoSignature({
+	dataId: webhookDataId,
+	requestId: webhookRequestId,
+	signature: `ts=1700000000,v1=${webhookHash}`,
+	secret: webhookSecret,
+}), true);
+assert.equal(verifyMercadoPagoSignature({
+	dataId: webhookDataId,
+	requestId: webhookRequestId,
+	signature: `ts=1700000000,v1=${'0'.repeat(64)}`,
+	secret: webhookSecret,
+}), false);
+assert.equal(mapMercadoPagoSubscriptionStatus('authorized'), 'pending');
+assert.equal(mapMercadoPagoSubscriptionStatus('cancelled'), 'canceled');
+assert.equal(mapMercadoPagoSubscriptionStatus('paused'), 'past_due');
+assert.equal(BILLING_PLANS.essencial.amount, pEssencial.preco);
+assert.equal(BILLING_PLANS.profissional.amount, pProfissional.preco);
+console.log('- Billing: assinatura do webhook Mercado Pago e mapeamento de status -> ✅ OK');
 
 // 2. Teste de Cálculo de Aging e Status
 console.log("\n2. Validando Motor de Cálculo de Aging e Status:");
@@ -117,6 +210,9 @@ assert.deepEqual(initialAuth, { user: null, loadingAuth: true });
 assert.equal(getProtectedRouteDecision({ ...initialAuth }), 'loading');
 assert.equal(getProtectedRouteDecision({ loadingAuth: false, user: null }), 'login');
 assert.equal(getProtectedRouteDecision({ loadingAuth: false, user: { id: 'u1' } }), 'allow');
+assert.equal(getProtectedRouteDecision({ loadingAuth: false, user: { id: 'u1' }, subscriptionStatus: 'pending', pathname: '/dashboard' }), 'billing');
+assert.equal(getProtectedRouteDecision({ loadingAuth: false, user: { id: 'u1' }, subscriptionStatus: 'pending', pathname: '/planos' }), 'allow');
+assert.equal(getProtectedRouteDecision({ loadingAuth: false, user: { id: 'u1' }, subscriptionStatus: 'pending', pathname: '/admin/pagamentos' }), 'allow');
 assert.equal(getProtectedRouteDecision({ loadingAuth: false, user: { id: 'forged', role: 'admin' }, requireAdmin: true, isAdmin: false }), 'forbidden');
 
 let empresaLookup = null;
@@ -126,7 +222,7 @@ const authenticatedProfile = await resolveAuthenticatedProfile({
 			eq: (column, value) => ({
 				maybeSingle: async () => {
 					empresaLookup = { table, columns, column, value };
-					return { data: { id: 'empresa-remota', razao_social: 'Empresa Remota', plano: 'pro' }, error: null };
+					return { data: { id: 'empresa-remota', razao_social: 'Empresa Remota', plano: 'pro', subscription_status: 'active' }, error: null };
 				},
 			}),
 		}),
@@ -134,11 +230,12 @@ const authenticatedProfile = await resolveAuthenticatedProfile({
 }, { id: 'auth-user-real', email: 'real@example.com', user_metadata: { empresa_id: 'empresa-forjada' } });
 assert.deepEqual(empresaLookup, {
 	table: 'empresas',
-	columns: 'id, razao_social, cnpj, telefone, plano',
+	columns: 'id, razao_social, cnpj, telefone, plano, subscription_status',
 	column: 'user_id',
 	value: 'auth-user-real',
 });
 assert.equal(authenticatedProfile.empresa_id, 'empresa-remota');
+assert.equal(authenticatedProfile.subscription_status, 'active');
 await assert.rejects(
 	resolveAuthenticatedProfile({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }) }, { id: 'auth-user-sem-empresa' }),
 	/empresa vinculada/

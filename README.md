@@ -1,5 +1,5 @@
-# RecebeAi - Plataforma SaaS de Gestão de Cobranças e Recebíveis
-O **RecebeAi** é uma solução completa de Software como Serviço (SaaS) desenvolvida para pequenas e médias empresas reduzirem a inadimplência e automatizarem o fluxo de contas a receber.
+# RecebeAi - Gestão de Cobranças e Recebíveis
+O **RecebeAi** ajuda pequenas e médias empresas a organizar clientes, recebíveis e o acompanhamento de cobranças.
 
 ---
 
@@ -9,17 +9,17 @@ O **RecebeAi** é uma solução completa de Software como Serviço (SaaS) desenv
 - **Aging da Carteira & Individual**: Tabela consolidada de faixas de atraso (A vencer, 1-30 dias, 31-60 dias, 61-90 dias, >90 dias) para rápida tomada de decisão.
 - **CRM de Clientes & Devedores**: Cadastro completo, classificação de risco de crédito (baixo, médio, alto), histórico de cobranças e títulos vinculados.
 - **Gestão de Títulos & Recebíveis**: Emissão e controle de faturas, boletos e notas fiscais com baixa manual de pagamentos e filtros por status.
-- **Régua de Cobrança Multicanal**: Automação de lembretes preventivos (D-3, D0) e cobranças incisivas pós-vencimento (D+3, D+10).
-- **Disparo Direto via WhatsApp com PIX**: Gerador inteligente de links do WhatsApp com substituição automática de dados do devedor e chave PIX da empresa.
+- **Acompanhamento de cobranças**: Organização de vencimentos e preparação de mensagens para envio manual.
+- **Mensagens via WhatsApp com PIX**: Geração de mensagens com dados do recebível para abrir no WhatsApp; o envio, recebimento e a confirmação do PIX são feitos fora do RecebeAi.
 - **Promessas de Pagamento & Acordos**: Registro de acordos e acompanhamento de status (Pendente, Cumprida, Quebrada).
-- **Multi-tenancy & Banco Supabase**: Suporte a Row Level Security (RLS) para isolar os dados de cada empresa cliente.
+- **Banco Supabase**: O schema contém políticas Row Level Security (RLS); revise a cobertura das políticas e as configurações do projeto antes de usar com dados de produção.
 
 ---
 
 ## 🛠️ Como Executar Localmente
 
 ### 1. Pré-requisitos
-- **Node.js** (versão 18 ou superior)
+- **Node.js** (versão 22 ou superior)
 - **NPM** instalado
 
 ### 2. Instalação das Dependências
@@ -65,21 +65,40 @@ O frontend usa a chave pública `anon`/publishable; nunca configure uma `service
 
 O workflow também repassa explicitamente a senha do banco Supabase ao comando `supabase db push` e escopa a publicação Vercel para a organização correta, evitando que o ambiente de produção seja deployado em outra conta ou projeto.
 
-Para novas alterações de banco, adicione um arquivo SQL versionado em `supabase/migrations` (nome no formato `YYYYMMDDHHMMSS_descricao.sql`). O arquivo `supabase/schema.sql` permanece como referência do schema completo.
+Para novas alterações de banco, adicione um arquivo SQL versionado em `supabase/migrations` (nome no formato `YYYYMMDDHHMMSS_descricao.sql`). `supabase/schema.sql` documenta o schema inicial; migrations posteriores são a fonte de verdade para os incrementos.
 
 O comando local `npm run supabase:sync` apenas audita a existência das tabelas; ele não aplica migrations. Para executá-lo, configure `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` no ambiente ou em `.env` e use Node.js 22 ou superior.
 
+O isolamento entre empresas é aplicado no banco por RLS restritiva (não pode ser ampliada por uma policy permissiva adicional) e por chaves estrangeiras compostas que exigem que clientes, recebíveis, cobranças, promessas e prioridades pertençam à mesma empresa. A migration de cobrança aborta, sem apagar registros, se encontrar vínculos cruzados antigos; esses vínculos devem ser corrigidos antes de reaplicá-la. Após aplicar migrations em produção, valide acesso/leitura/gravação com duas contas autenticadas distintas e confirme as policies e constraints efetivas no Supabase.
+
 ---
 
-## 💼 Guia de Comercialização do SaaS
+## 💼 Cobrança e comercialização
 
-Para comercializar o RecebeAi no mercado brasileiro (B2B):
-1. **Planos de Assinatura**:
-   - **Essencial (R$ 149,00/mês)**: até 300 clientes, R$ 100k gerenciados, Kanban, régua de 5 etapas, templates WhatsApp/Email, cálculo de Aging e DSO.
-   - **Profissional (R$ 349,00/mês)**: clientes e recebíveis ilimitados, IA Financeira de diagnóstico, régua automatizada WhatsApp API, score preditivo de cobrança, gestão de acordos.
-   - **Enterprise (R$ 799,00/mês)**: multi-usuários por equipe, API aberta para ERPs e Bancos, régua multicanal customizada com Webhooks, IA para negociações complexas, onboarding e gerente de conta dedicado.
-2. **Gateway de Assinaturas**:
-   - Conecte um provedor como Asaas, Mercado Pago ou Stripe para cobrar as mensalidades dos assinantes via Cartão de Crédito ou PIX Recorrente.
-3. **Deploy na Vercel**:
+O fluxo automático usa assinaturas mensais do Mercado Pago: o servidor cria o checkout, o webhook assinado consulta a assinatura diretamente à API do provedor e somente então atualiza o plano. O retorno do navegador não ativa acesso. Novas empresas ficam pendentes até essa confirmação; registros anteriores são mantidos ativos pela migration, sem exclusão de dados do banco.
+
+Os registros fictícios de marketing/demonstração são mantidos isolados no navegador e só aparecem na sessão explícita de demonstração. Ao iniciar um login real ou cadastro, o app remove os dados locais da demonstração sem apagar contas, sessões ou preferências; os dados das empresas reais são carregados exclusivamente do Supabase.
+
+Configure estas variáveis no ambiente de **produção da Vercel** (e também no preview/local de teste, quando aplicável):
+
+```env
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=chave-service-role-do-servidor
+MP_ACCESS_TOKEN=access-token-privado-do-mercado-pago
+MP_WEBHOOK_SECRET=assinatura-secreta-do-webhook
+APP_BASE_URL=https://seu-dominio-de-producao
+BILLING_ADMIN_EMAILS=admin1@seudominio.com,admin2@seudominio.com
+```
+
+`SUPABASE_SERVICE_ROLE_KEY`, `MP_ACCESS_TOKEN` e `MP_WEBHOOK_SECRET` são segredos exclusivos do servidor. Não use prefixo `VITE_` e não os coloque no navegador, em arquivos versionados ou no GitHub Actions log. A URL pública e chave publishable do Supabase continuam configuradas como `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
+
+No Mercado Pago, habilite as notificações de assinatura `subscription_preapproval` e `subscription_authorized_payment` para `https://seu-dominio-de-producao/api/billing/webhook` e configure a mesma chave secreta em `MP_WEBHOOK_SECRET`. Faça primeiro testes com credenciais e assinaturas de teste. O plano Enterprise segue indisponível.
+
+O fluxo manual é uma alternativa de revisão para assinaturas pendentes: o cliente solicita análise e um operador verifica o ID e o pagamento no painel do Mercado Pago antes de aprovar. Configure `BILLING_ADMIN_EMAILS` com e-mails confirmados do Supabase; a fila restrita fica em `/admin/pagamentos`. A decisão exige justificativa e é registrada. A observação enviada pelo cliente não é prova de pagamento.
+
+Antes da comercialização, teste os fluxos automático e manual, além de criação, renovação, rejeição e cancelamento com a conta Mercado Pago do proprietário. Revise também os termos, privacidade, cancelamento e reembolso aplicáveis ao negócio. Como não há empresas reais legadas no banco neste momento, as novas contas começam pendentes e só recebem acesso após confirmação de pagamento.
+
+## 🚀 Deploy na Vercel
+1. **Deploy**:
    - O projeto já conta com o arquivo [`vercel.json`](vercel.json) configurado para roteamento SPA sem erros de 404 ao recarregar a página.
    - Basta importar o repositório na Vercel e adicionar as variáveis de ambiente.
