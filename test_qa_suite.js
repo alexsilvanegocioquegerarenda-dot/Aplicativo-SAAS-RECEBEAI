@@ -25,6 +25,10 @@ const tenantMigration = readFileSync(
 	new URL('./supabase/migrations/20261003000000_billing_lifecycle.sql', import.meta.url),
 	'utf8',
 );
+const tenantIntegrationTest = readFileSync(
+	new URL('./supabase/tests/tenant_isolation.sql', import.meta.url),
+	'utf8',
+);
 for (const constraint of [
 	'recebiveis_cliente_empresa_fkey',
 	'cobrancas_cliente_empresa_fkey',
@@ -55,6 +59,9 @@ for (const table of [
 }
 assert.match(tenantMigration, /AS RESTRICTIVE FOR ALL TO public/);
 assert.match(tenantMigration, /Tenant isolation migration stopped:[\s\S]*no rows were deleted/);
+assert.match(tenantIntegrationTest, /^DO \$tenant_isolation_test\$[\s\S]*\$tenant_isolation_test\$;$/);
+assert.match(tenantIntegrationTest, /set_config\('role', 'authenticated'/);
+assert.match(tenantIntegrationTest, /cross-company receivable\/client link was accepted/);
 console.log('- RLS restritiva e relações compostas de tenant cobertas pela migration -> ✅ OK');
 
 const demoStorage = new Map([

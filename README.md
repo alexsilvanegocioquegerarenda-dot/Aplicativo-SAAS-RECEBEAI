@@ -69,7 +69,7 @@ Para novas alterações de banco, adicione um arquivo SQL versionado em `supabas
 
 O comando local `npm run supabase:sync` apenas audita a existência das tabelas; ele não aplica migrations. Para executá-lo, configure `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` no ambiente ou em `.env` e use Node.js 22 ou superior.
 
-O isolamento entre empresas é aplicado no banco por RLS restritiva (não pode ser ampliada por uma policy permissiva adicional) e por chaves estrangeiras compostas que exigem que clientes, recebíveis, cobranças, promessas e prioridades pertençam à mesma empresa. A migration de cobrança aborta, sem apagar registros, se encontrar vínculos cruzados antigos; esses vínculos devem ser corrigidos antes de reaplicá-la. Após aplicar migrations em produção, valide acesso/leitura/gravação com duas contas autenticadas distintas e confirme as policies e constraints efetivas no Supabase.
+O isolamento entre empresas é aplicado no banco por RLS restritiva (não pode ser ampliada por uma policy permissiva adicional) e por chaves estrangeiras compostas que exigem que clientes, recebíveis, cobranças, promessas e prioridades pertençam à mesma empresa. A migration de cobrança aborta, sem apagar registros, se encontrar vínculos cruzados antigos; esses vínculos devem ser corrigidos antes de reaplicá-la. O deploy executa `supabase/tests/tenant_isolation.sql` depois das migrations: um teste transacional cria duas identidades temporárias, verifica leituras isoladas e rejeição de vínculos cruzados e remove os registros de teste. Para a validação final, confirme também no painel Supabase que as migrations, policies e constraints estão aplicadas.
 
 ---
 
