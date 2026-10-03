@@ -53,6 +53,8 @@ Configure estes **Actions secrets** no repositório do GitHub (`Settings > Secre
 - `VERCEL_ORG_ID`: ID da equipe/conta da Vercel.
 - `VERCEL_PROJECT_ID`: ID do projeto Vercel conectado a este repositório.
 
+O job de deploy usa o ambiente GitHub `production`; secrets cadastrados nesse ambiente ficam disponíveis para ele. `VERCEL_ORG_ID` deve ser o ID ou slug da equipe com acesso ao projeto, sem espaços ou quebras de linha.
+
 Configure também, nas variáveis de ambiente de **produção** do projeto Vercel, os valores usados pelo frontend:
    ```env
    VITE_SUPABASE_URL=https://seu-projeto.supabase.co
@@ -64,6 +66,8 @@ O frontend usa a chave pública `anon`/publishable; nunca configure uma `service
 O workflow também repassa explicitamente a senha do banco Supabase ao comando `supabase db push` e escopa a publicação Vercel para a organização correta, evitando que o ambiente de produção seja deployado em outra conta ou projeto.
 
 Para novas alterações de banco, adicione um arquivo SQL versionado em `supabase/migrations` (nome no formato `YYYYMMDDHHMMSS_descricao.sql`). O arquivo `supabase/schema.sql` permanece como referência do schema completo.
+
+O comando local `npm run supabase:sync` apenas audita a existência das tabelas; ele não aplica migrations. Para executá-lo, configure `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` no ambiente ou em `.env` e use Node.js 22 ou superior.
 
 ---
 

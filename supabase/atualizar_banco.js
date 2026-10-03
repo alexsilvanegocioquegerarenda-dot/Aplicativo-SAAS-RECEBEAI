@@ -31,26 +31,50 @@ if (fs.existsSync(envPath)) {
   });
 }
 
-const SUPABASE_URL =
-  process.env.VITE_SUPABASE_URL ||
-  envVars.VITE_SUPABASE_URL ||
-  "https://upuuqfojhqjgzsdycvxp.supabase.co";
-
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || envVars.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY =
-  process.env.VITE_SUPABASE_ANON_KEY ||
-  envVars.VITE_SUPABASE_ANON_KEY ||
-  "sb_publishable_kT4M2GSyV2p0lY1ZRN6R5w_P85qxBAV";
+  process.env.VITE_SUPABASE_ANON_KEY || envVars.VITE_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error(
+    "Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no ambiente ou no arquivo .env antes da auditoria."
+  );
+  process.exit(1);
+}
+
+let parsedSupabaseUrl;
+try {
+  parsedSupabaseUrl = new URL(SUPABASE_URL);
+} catch {
+  console.error("VITE_SUPABASE_URL precisa ser uma URL válida do projeto Supabase.");
+  process.exit(1);
+}
+
+if (
+  parsedSupabaseUrl.protocol !== "https:" ||
+  parsedSupabaseUrl.pathname !== "/" ||
+  parsedSupabaseUrl.search ||
+  parsedSupabaseUrl.hash
+) {
+  console.error(
+    "VITE_SUPABASE_URL deve ser apenas a URL HTTPS do projeto, sem Markdown, caminho ou parâmetros."
+  );
+  process.exit(1);
+}
+
+if (typeof globalThis.WebSocket !== "function") {
+  console.error(
+    "A auditoria Supabase precisa de Node.js 22 ou superior, com WebSocket nativo."
+  );
+  process.exit(1);
+}
 
 console.log("==================================================================");
 console.log("🚀 RECEBEAI - SINCRONIZADOR & ATUALIZADOR DO SUPABASE");
 console.log("==================================================================");
-console.log(`📡 URL do Projeto : ${SUPABASE_URL}`);
-console.log(`🔑 Chave API     : ${SUPABASE_ANON_KEY.substring(0, 15)}... (Publishable/Anon)`);
+console.log(`📡 URL do Projeto : ${parsedSupabaseUrl.origin}`);
+console.log("🔑 Chave API     : configurada (publishable/anon)");
 console.log("------------------------------------------------------------------");
-// Polyfill global WebSocket para ambientes Node.js < 22 (como Node 20 em CI/CD ou runners legados)
-if (typeof globalThis.WebSocket === "undefined") {
-  globalThis.WebSocket = class WebSocket {};
-}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: false },
@@ -77,49 +101,61 @@ async function auditarTabelas() {
   console.log("\n🔍 Verificando estrutura das tabelas no PostgreSQL do Supabase...\n");
   let ativas = 0;
   let pendentes = 0;
+  let erros = 0;
 
   for (const tab of TABELAS) {
     const t0 = Date.now();
     try {
-      const { data, error, status } = await supabase
+      const { error, status } = await supabase
         .from(tab.nome)
         .select("*", { count: "exact", head: true });
 
       const latencia = Date.now() - t0;
 
-      if (!error || status === 200 || status === 204) {
+      if (!error) {
         console.log(`✅ [ATIVA]      Tabela '${tab.nome.padEnd(20)}' (${latencia}ms) - ${tab.descricao}`);
         ativas++;
-      } else if (error.code === "42P01") {
+      } else if (["42P01", "PGRST205"].includes(error.code)) {
         console.log(`⚠️  [PENDENTE]   Tabela '${tab.nome.padEnd(20)}' NÃO EXISTE NO POSTGRESQL`);
         pendentes++;
-      } else {
-        // Erros de RLS 401/403 significam que a tabela EXISTE mas exige autenticação do usuário
+      } else if (
+        error.code === "42501" ||
+        [401, 403].includes(status || error.status)
+      ) {
         console.log(`🔒 [RLS ATIVO]  Tabela '${tab.nome.padEnd(20)}' (${latencia}ms) - Protegida por Row Level Security`);
         ativas++;
+      } else {
+        console.error(
+          `❌ [ERRO]       Tabela '${tab.nome.padEnd(20)}' (${latencia}ms): ${error.message}`
+        );
+        erros++;
       }
     } catch (err) {
-      console.log(`❌ [ERRO]       Tabela '${tab.nome.padEnd(20)}': ${err.message}`);
-      pendentes++;
+      console.error(`❌ [ERRO]       Tabela '${tab.nome.padEnd(20)}': ${err.message}`);
+      erros++;
     }
   }
 
   console.log("\n------------------------------------------------------------------");
-  console.log(`📊 RESUMO DA AUDITORIA: ${ativas} tabelas ativas/protegidas, ${pendentes} pendentes.`);
+  console.log(
+    `📊 RESUMO DA AUDITORIA: ${ativas} tabelas ativas/protegidas, ${pendentes} pendentes, ${erros} erros.`
+  );
   console.log("------------------------------------------------------------------");
 
   if (pendentes > 0) {
     console.log("\n⚠️  ATENÇÃO: Algumas tabelas ainda não foram criadas no banco de dados.");
     console.log("Para atualizar ou criar todas as tabelas e políticas RLS de uma só vez:");
-    console.log("1. Acesse o Painel do Supabase:");
-    console.log(`   👉 https://supabase.com/dashboard/project/upuuqfojhqjgzsdycvxp/sql`);
-    console.log("2. Clique em 'New Query' (Nova Consulta).");
-    console.log("3. Copie e cole todo o conteúdo do arquivo:");
-    console.log(`   📄 supabase/schema.sql`);
-    console.log("4. Clique no botão 'Run' (Executar).\n");
-  } else {
+    console.log("1. Acesse o projeto correto no painel Supabase e abra o SQL Editor.");
+    console.log("2. Aplique as migrations versionadas em supabase/migrations.\n");
+  }
+
+  if (pendentes === 0 && erros === 0) {
     console.log("\n🎉 PARABÉNS! Todas as tabelas do Supabase estão configuradas e prontas");
     console.log("para receber clientes multi-empresa e operações do RecebeAi!");
+  }
+
+  if (pendentes > 0 || erros > 0) {
+    process.exitCode = 1;
   }
 }
 

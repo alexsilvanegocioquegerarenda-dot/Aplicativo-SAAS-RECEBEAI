@@ -22,7 +22,7 @@ jobs:
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Instalar dependências
@@ -68,6 +68,10 @@ jobs:
               exit 1
             fi
           done
+          if [[ "$VERCEL_ORG_ID" =~ [[:space:]] ]]; then
+            echo "::error::O secret VERCEL_ORG_ID não pode conter espaços ou quebras de linha."
+            exit 1
+          fi
 
       - name: Vincular projeto Supabase
         env:
@@ -85,7 +89,7 @@ jobs:
       - name: Configurar Node.js para Vercel CLI
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Instalar dependências
         run: npm ci
@@ -95,23 +99,23 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx --yes vercel@latest link --yes --project "$VERCEL_PROJECT_ID" --team "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN"
+        run: npx --yes vercel@latest link --yes --project "$VERCEL_PROJECT_ID" --team "$VERCEL_ORG_ID"
 
       - name: Baixar configurações de produção da Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx --yes vercel@latest pull --yes --environment=production --project "$VERCEL_PROJECT_ID" --team "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN"
+        run: npx --yes vercel@latest pull --yes --environment=production --project "$VERCEL_PROJECT_ID" --team "$VERCEL_ORG_ID"
 
       - name: Gerar build de produção da Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-        run: npx --yes vercel@latest build --prod --team "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN"
+        run: npx --yes vercel@latest build --prod --team "$VERCEL_ORG_ID"
 
       - name: Publicar na Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-        run: npx --yes vercel@latest deploy --prebuilt --prod --team "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN"
+        run: npx --yes vercel@latest deploy --prebuilt --prod --team "$VERCEL_ORG_ID"
