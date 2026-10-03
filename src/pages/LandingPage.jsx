@@ -84,7 +84,7 @@ export default function LandingPage() {
   const faqs = [
     {
       q: "Como o acesso aos dados é controlado?",
-      a: "O banco Supabase usa políticas Row Level Security (RLS). A cobertura das políticas deve ser revisada antes do uso com dados reais de produção.",
+      a: "O banco usa políticas de isolamento entre empresas. Antes de inserir dados reais de clientes, valide o isolamento com duas contas independentes em ambiente de teste.",
     },
     {
       q: "Preciso de conhecimento técnico ou integração com TI para usar?",
@@ -96,7 +96,7 @@ export default function LandingPage() {
     },
     {
       q: "Como funciona a contratação e o cancelamento?",
-      a: "As condições de contratação, cobrança, cancelamento e eventual reembolso devem ser confirmadas antes da compra. O retorno do checkout, por si só, não confirma a ativação de uma assinatura no RecebeAi.",
+      a: "A cobrança é mensal e recorrente. Você pode cancelar pela área da conta; após a confirmação do Mercado Pago, o acesso pago é encerrado e novas cobranças são interrompidas. A regra de arrependimento e reembolso está nos Termos de Uso. O retorno do checkout, por si só, não ativa a assinatura.",
     },
     {
       q: "O que é o cálculo de Aging List e DSO?",

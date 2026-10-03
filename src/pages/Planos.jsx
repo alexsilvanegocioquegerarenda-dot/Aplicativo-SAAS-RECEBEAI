@@ -106,7 +106,7 @@ export default function Planos() {
   };
 
   const handleCancelarAssinatura = async () => {
-    if (!window.confirm("Deseja cancelar a assinatura recorrente do Mercado Pago?")) return;
+    if (!window.confirm("Deseja cancelar a assinatura? Após a confirmação do Mercado Pago, novas cobranças serão interrompidas e o acesso pago será encerrado imediatamente.")) return;
     setCancelandoAssinatura(true);
     try {
       await cancelMercadoPagoSubscription();
@@ -210,7 +210,7 @@ export default function Planos() {
   const faqs = [
     {
       q: "Como funciona o cancelamento?",
-      a: "Consulte as condições de cancelamento apresentadas no checkout antes de concluir a contratação."
+      a: "Você pode cancelar a assinatura pela área da conta. Após a confirmação do Mercado Pago, o acesso pago é encerrado e novas cobranças são interrompidas. Consulte os Termos de Uso para a regra de reembolso."
     },
     {
       q: "Como funciona a cobrança?",
@@ -452,7 +452,7 @@ export default function Planos() {
                 Condições da contratação
               </h4>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Confira cancelamento e reembolso no checkout antes de pagar.
+                Consulte nos Termos de Uso as regras de cancelamento e reembolso antes de pagar.
               </p>
             </div>
           </div>

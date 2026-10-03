@@ -9,7 +9,20 @@
 - A aplicação mantém dados fictícios de demonstração no navegador; isso não é um backup dos dados da empresa.
 - A retenção de backup depende do plano Supabase. A documentação atual informa backups diários automáticos para planos Pro, Team e Enterprise, com retenções diferentes por plano. Confirme plano, política e disponibilidade no painel antes de contar com essa cobertura. PITR é um adicional e também deve ser confirmado no projeto.
 - Migrations versionadas em `supabase/migrations` descrevem o schema, mas não substituem cópia dos dados.
-- Definir e registrar antes do lançamento: responsável titular e substituto, periodicidade de exportações independentes, local de armazenamento cifrado, retenção, RPO (perda máxima tolerável) e RTO (tempo máximo para recuperar).
+- Definir e registrar antes do lançamento: responsável titular e substituto, periodicidade de exportações independentes, local de armazenamento cifrado, RPO (perda máxima tolerável) e RTO (tempo máximo para recuperar).
+
+## Retenção após encerramento de conta
+
+Aplicar os prazos publicados na Política de Privacidade:
+
+- Manter os dados operacionais enquanto a conta estiver ativa.
+- Disponibilizar, mediante solicitação do titular da conta, uma exportação durante os 30 dias após o encerramento. Conferir o escopo e entregar por canal seguro, sem incluir credenciais ou segredos.
+- Excluir ou anonimizar dados da conta e dados operacionais identificáveis dos sistemas ativos em até 90 dias após o encerramento, exceto os dados sujeitos a retenção legal, prevenção a fraude ou exercício regular de direitos.
+- Manter registros de suporte por até 2 anos após o encerramento do chamado e documentos fiscais/transacionais pelo prazo legal aplicável.
+- Backups gerenciados seguem a retenção efetivamente configurada pelo provedor e expiram de forma rotativa; não prometer eliminação imediata de cópias de backup. Se uma restauração trouxer de volta dados com solicitação de exclusão pendente, reaplicar a exclusão após validar a recuperação.
+- Para exportações independentes deste runbook, manter cópias cifradas por até 30 dias após a verificação de integridade, salvo retenção legal ou investigação de incidente; eliminar cópias expiradas de forma segura e registrar a execução sem registrar os dados exportados.
+
+Pedidos de exportação ou exclusão devem ser autenticados, registrados com data, escopo e responsável, e concluídos dentro dos prazos acima. Antes da exclusão, verificar se existe obrigação legal ou necessidade documentada de preservação.
 
 ## A. Conferência de backups automáticos
 
@@ -66,7 +79,7 @@ Use apenas se PITR estiver habilitado e disponível no plano/projeto. No Dashboa
 ## Checklist antes de usar dados reais
 
 - [ ] Confirmar os backups automáticos e retenção do plano atual no painel Supabase.
-- [ ] Definir responsáveis, canal de incidentes, periodicidade, retenção, RPO e RTO.
+- [ ] Definir responsáveis, canal de incidentes, periodicidade de exportação, RPO e RTO; cumprir os prazos de retenção desta seção.
 - [ ] Configurar uma cópia independente cifrada e fora do repositório.
 - [ ] Completar um ensaio documentado de restauração em projeto separado.
 - [ ] Validar o isolamento com duas contas independentes em teste controlado, sem dados reais de terceiros.

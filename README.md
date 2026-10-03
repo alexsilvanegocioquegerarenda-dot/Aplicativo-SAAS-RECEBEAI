@@ -105,7 +105,7 @@ Antes da comercialização, teste os fluxos automático e manual, além de cria�
 - Suporte: página pública em `/suporte`; contato informado: `financeiro.saasrecebeai@gmail.com`.
 - Backup e restauração: [`docs/backup-e-restauracao.md`](docs/backup-e-restauracao.md), procedimento interno.
 
-**Atenção:** Termos, Privacidade e Suporte estão publicados como documentos preliminares, não como política comercial ou jurídica final. Antes de aceitar clientes pagantes, confirme identificação fiscal/endereço do fornecedor, condições completas de cobrança/cancelamento/reembolso, prazos e canais de suporte, retenção, fornecedores/suboperadores e fluxos LGPD; submeta os textos a revisão jurídica. Não cadastre dados reais de clientes de terceiros até validar o isolamento com duas contas independentes em teste controlado.
+As páginas públicas informam identificação do operador, cobrança, cancelamento, reembolso, atendimento e retenção. Os compromissos publicados devem ser cumpridos operacionalmente; revise-os com assessoria jurídica antes de iniciar a comercialização. A publicação não representa certificação ou parecer jurídico. O teste automatizado de isolamento no CI não substitui a validação controlada com duas contas independentes. Não cadastre dados reais de clientes de terceiros até concluir e registrar essa validação.
 
 ## 🚀 Deploy na Vercel
 1. **Deploy**:

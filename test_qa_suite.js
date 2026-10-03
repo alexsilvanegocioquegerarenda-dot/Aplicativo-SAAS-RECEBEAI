@@ -45,6 +45,10 @@ const landingPage = readFileSync(
 	new URL('./src/pages/LandingPage.jsx', import.meta.url),
 	'utf8',
 );
+const plansPage = readFileSync(
+	new URL('./src/pages/Planos.jsx', import.meta.url),
+	'utf8',
+);
 const backupRunbook = readFileSync(
 	new URL('./docs/backup-e-restauracao.md', import.meta.url),
 	'utf8',
@@ -89,10 +93,24 @@ assert.match(deployWorkflow, /supabase db reset/);
 assert.match(deployWorkflow, /supabase db query --local --file supabase\/tests\/tenant_isolation\.sql/);
 assert.doesNotMatch(deployWorkflow, /supabase db query --linked --file supabase\/tests\/tenant_isolation\.sql/);
 assert.match(publicInfoPage, /financeiro\.saasrecebeai@gmail\.com/);
+assert.match(publicInfoPage, /266\.281\.508-60/);
+assert.match(publicInfoPage, /Rua Sargento José André da Mota/);
+assert.match(publicInfoPage, /reembolso\s+integral/);
+assert.match(publicInfoPage, /durante\s+30 dias/);
+assert.match(publicInfoPage, /em até 90 dias/);
+assert.match(publicInfoPage, /até 1 dia útil/);
+assert.doesNotMatch(publicInfoPage, /Documento preliminar|versão preliminar/i);
+assert.match(publicInfoPage, /encerra imediatamente o acesso pago/);
+assert.match(landingPage, /A regra de arrependimento e reembolso está nos Termos de Uso/);
+assert.match(plansPage, /acesso pago será encerrado imediatamente/);
+assert.match(plansPage, /regras de cancelamento e reembolso antes de pagar/);
+assert.doesNotMatch(landingPage, /devem ser confirmadas antes da compra/);
 assert.match(landingPage, /to="\/termos"/);
 assert.match(landingPage, /to="\/privacidade"/);
 assert.match(landingPage, /to="\/suporte"/);
 assert.match(backupRunbook, /não incluem os objetos armazenados pelo Supabase Storage/i);
+assert.match(backupRunbook, /exportação durante os 30 dias/i);
+assert.match(backupRunbook, /em até 90 dias/i);
 console.log('- RLS restritiva e relações compostas de tenant cobertas pela migration -> ✅ OK');
 
 const demoStorage = new Map([

@@ -5,6 +5,10 @@ import { ArrowLeft, Mail, ShieldCheck, FileText, LifeBuoy } from "lucide-react";
 const sectionClass = "space-y-3";
 const headingClass = "text-lg font-bold text-slate-900";
 const paragraphClass = "leading-7 text-slate-600";
+const supportEmail = "financeiro.saasrecebeai@gmail.com";
+const providerName = "Alexandre Marçal da Silva";
+const providerCpf = "266.281.508-60";
+const providerAddress = "Rua Sargento José André da Mota, nº 142 - Jardim Maria Duarte - CEP 05752-000";
 
 function PublicPage({ title, description, icon: Icon, children }) {
   return (
@@ -26,18 +30,12 @@ function PublicPage({ title, description, icon: Icon, children }) {
             </div>
           </div>
           <p className="mt-5 text-sm leading-6 text-slate-500">{description}</p>
-          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-            <strong>Documento preliminar — revisão necessária antes da comercialização.</strong>{" "}
-            A identificação fiscal/endereço do fornecedor, prazos comerciais, retenção de dados,
-            fornecedores e demais campos marcados como pendentes precisam ser confirmados antes
-            de apresentar este texto como versão final.
-          </div>
         </header>
 
         <article className="mt-5 space-y-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-10">
           {children}
           <p className="border-t border-slate-100 pt-5 text-xs text-slate-400">
-            Versão preliminar de 03/10/2026. Este material é informativo e não substitui revisão jurídica.
+            Vigência: 03/10/2026. Atualizado em 03/10/2026.
           </p>
         </article>
 
@@ -59,26 +57,25 @@ function TermsOfUse() {
   return (
     <PublicPage
       title="Termos de Uso"
-      description="Regras preliminares para acesso e uso da plataforma RecebeAi. A versão final deve ser revisada e aceita pelo cliente antes da contratação."
+      description="Condições de acesso, assinatura, cancelamento e uso da plataforma RecebeAi."
       icon={FileText}
     >
       <Section title="1. Identificação e contato">
         <p className={paragraphClass}>
-          O RecebeAi é uma plataforma de organização de clientes, recebíveis e atividades de cobrança,
-          operada por Alexandre Marçal da Silva. A qualificação fiscal e o endereço do fornecedor
-          ainda precisam ser confirmados e publicados antes da comercialização. O canal de suporte é{" "}
-          <a className="font-semibold text-blue-700 hover:underline" href="mailto:financeiro.saasrecebeai@gmail.com">
-            financeiro.saasrecebeai@gmail.com
+          O RecebeAi é operado por {providerName}, inscrito no CPF sob nº {providerCpf}, com endereço
+          informado em {providerAddress}. O canal de contato é{" "}
+          <a className="font-semibold text-blue-700 hover:underline" href={`mailto:${supportEmail}`}>
+            {supportEmail}
           </a>.
         </p>
       </Section>
 
       <Section title="2. Aceite e elegibilidade">
         <p className={paragraphClass}>
-          Ao criar uma conta ou usar a plataforma após a publicação da versão final destes Termos,
-          o usuário declara que leu e aceita as condições aplicáveis. O cadastro deve ser feito por
-          pessoa autorizada a representar a empresa e a fornecer os dados inseridos. A versão final
-          deverá informar a forma de aceite, a data de vigência e como serão comunicadas alterações.
+          Ao criar uma conta, contratar um plano ou usar a plataforma, o usuário aceita estes Termos
+          e a Política de Privacidade. O cadastro em nome de uma empresa deve ser realizado por pessoa
+          autorizada. O usuário deve fornecer dados verdadeiros, manter seus contatos atualizados e
+          avisar os demais usuários da empresa sobre estas condições.
         </p>
       </Section>
 
@@ -122,40 +119,70 @@ function TermsOfUse() {
         </p>
       </Section>
 
-      <Section title="6. Planos, cobrança e cancelamento — pendente de confirmação">
+      <Section title="6. Planos, cobrança, cancelamento e reembolso">
         <p className={paragraphClass}>
-          A página comercial atualmente apresenta os planos Essencial (R$ 149/mês) e Profissional
-          (R$ 349/mês); o plano Enterprise está indisponível para contratação automática. Preço,
-          periodicidade, tributos, renovação, início da cobrança, cancelamento, reembolso, período
-          de acesso após cancelamento e canal de contestação devem ser confirmados no checkout e na
-          versão final destes Termos. Não contrate com base neste rascunho. A ativação depende da
-          confirmação do pagamento pelo provedor e pelo RecebeAi.
+          Os planos disponíveis e seus preços são os exibidos na página de contratação antes do
+          pagamento. Os planos Essencial e Profissional são cobrados mensalmente, com renovação
+          automática até o cancelamento; o plano Enterprise não está disponível para contratação
+          automática. O preço, período, tributos e forma de pagamento aplicáveis são apresentados
+          antes de confirmar cada contratação. A assinatura é ativada após confirmação do pagamento
+          pelo provedor e pelo RecebeAi.
+        </p>
+        <p className={paragraphClass}>
+          O cliente pode cancelar a assinatura a qualquer momento na área da conta ou solicitando
+          pelo e-mail {supportEmail}. Após a confirmação do Mercado Pago, o cancelamento impede novas
+          cobranças e encerra imediatamente o acesso pago. Não há multa de cancelamento, mas não há
+          reembolso proporcional do período já iniciado, exceto quando exigido por lei ou previsto
+          na regra de reembolso abaixo. O cancelamento não elimina valores vencidos.
+        </p>
+        <p className={paragraphClass}>
+          Para compras feitas pela internet, o RecebeAi aceita pedido de desistência e reembolso
+          integral em até 7 dias corridos da contratação inicial. Como política comercial adicional,
+          pedidos feitos em até 7 dias corridos de cada renovação mensal também recebem reembolso
+          integral daquela cobrança. Solicite pelo e-mail {supportEmail}, identificando a conta e a
+          cobrança, sem enviar dados completos de cartão. O pedido será confirmado em até 1 dia útil
+          e, quando elegível, o estorno será solicitado ao meio de pagamento em até 5 dias úteis.
+          O prazo para o valor aparecer depende do banco, emissor ou provedor de pagamento.
+          Direitos legais de arrependimento, contestação, reembolso e proteção do consumidor
+          prevalecem quando forem mais favoráveis ou obrigatórios.
+        </p>
+        <p className={paragraphClass}>
+          Cobrança duplicada, não reconhecida ou erro de processamento deve ser reportado imediatamente
+          pelo mesmo canal. O RecebeAi investigará e corrigirá cobranças indevidas, sem limitar o
+          direito de contestar junto ao meio de pagamento.
         </p>
       </Section>
 
       <Section title="7. Disponibilidade, suspensão e encerramento">
         <p className={paragraphClass}>
-          Podem ocorrer manutenção, indisponibilidade de fornecedores ou falhas de rede. O
-          procedimento, aviso prévio quando possível, critérios de suspensão por inadimplência ou
-          uso indevido, encerramento da conta, exportação e eliminação dos dados precisam ser
-          definidos na versão final. Nenhuma disposição limita direitos inderrogáveis previstos em lei.
+          O serviço é disponibilizado continuamente, exceto por manutenção, falha de conectividade,
+          indisponibilidade de fornecedores, força maior ou incidente de segurança. Sempre que
+          razoavelmente possível, manutenções programadas serão comunicadas previamente. O acesso
+          pode ser temporariamente limitado para proteger contas, cumprir a lei, tratar inadimplência
+          ou interromper uso fraudulento/abusivo; quando possível, o usuário será avisado e poderá
+          corrigir a situação. O usuário pode solicitar encerramento e exportação de seus dados pelo
+          canal de suporte, conforme a Política de Privacidade.
         </p>
       </Section>
 
       <Section title="8. Propriedade intelectual e responsabilidade">
         <p className={paragraphClass}>
           A plataforma, sua marca e seus componentes permanecem com seus respectivos titulares.
-          Estes Termos não transferem a propriedade dos dados inseridos pelo usuário. As regras
-          finais de licença, garantias, responsabilidade e limites de indenização devem ser revisadas
-          por assessoria jurídica e não excluem responsabilidades que a lei não permita excluir.
+          O usuário mantém os direitos sobre os dados que insere e concede ao RecebeAi apenas a
+          autorização necessária para hospedá-los e tratá-los para prestar o serviço, conforme estes
+          Termos e a Política de Privacidade. Nenhuma cláusula exclui garantias ou responsabilidades
+          que não possam ser afastadas pela legislação aplicável.
         </p>
       </Section>
 
       <Section title="9. Lei aplicável e alterações">
         <p className={paragraphClass}>
-          Aplicam-se as leis brasileiras, observadas as normas de proteção do consumidor e de dados
-          pessoais quando cabíveis. Foro, procedimento de reclamação e comunicação de alterações
-          devem ser definidos na revisão final, respeitados os direitos legais do usuário.
+          Estes Termos são regidos pelas leis brasileiras. Controvérsias serão tratadas pelo foro
+          competente conforme a legislação aplicável, preservado o foro legal do consumidor quando
+          cabível. Alterações relevantes serão informadas por aviso na plataforma ou pelo e-mail
+          cadastrado; a versão vigente e a data de atualização estarão nesta página. O uso após a
+          vigência da alteração constitui aceite quando permitido por lei; se o usuário não concordar,
+          poderá cancelar a assinatura antes da próxima renovação.
         </p>
       </Section>
     </PublicPage>
@@ -166,16 +193,15 @@ function PrivacyPolicy() {
   return (
     <PublicPage
       title="Política de Privacidade"
-      description="Resumo preliminar sobre dados tratados pelo RecebeAi, para que sejam completados e validados antes do uso com dados reais."
+      description="Como o RecebeAi trata dados pessoais de titulares e dados inseridos por empresas usuárias."
       icon={ShieldCheck}
     >
       <Section title="1. Quem trata os dados">
         <p className={paragraphClass}>
-          O serviço é operado por Alexandre Marçal da Silva. A qualificação fiscal e o endereço do
-          controlador precisam ser confirmados antes da comercialização. Para assuntos de privacidade,
-          utilize{" "}
-          <a className="font-semibold text-blue-700 hover:underline" href="mailto:financeiro.saasrecebeai@gmail.com">
-            financeiro.saasrecebeai@gmail.com
+          O RecebeAi é operado por {providerName}, CPF {providerCpf}, endereço {providerAddress}.
+          Contato para privacidade e exercício de direitos:{" "}
+          <a className="font-semibold text-blue-700 hover:underline" href={`mailto:${supportEmail}`}>
+            {supportEmail}
           </a>.
         </p>
       </Section>
@@ -183,11 +209,10 @@ function PrivacyPolicy() {
       <Section title="2. Papéis no tratamento">
         <p className={paragraphClass}>
           Para cadastro, autenticação, cobrança da assinatura, suporte e segurança da própria conta,
-          o operador do RecebeAi define as finalidades e atua como controlador, sujeito à confirmação
-          jurídica. Para dados dos clientes/devedores inseridos por uma empresa usuária, essa empresa
-          normalmente define a finalidade e atua como controladora; o RecebeAi trata os dados para
-          prestar o serviço e pode atuar como operador. As instruções, responsabilidades e eventual
-          contrato de tratamento de dados entre as partes precisam ser formalizados antes do piloto.
+          o operador do RecebeAi atua como controlador. Para dados de clientes/devedores inseridos
+          por uma empresa usuária, essa empresa define as finalidades e atua como controladora; o
+          RecebeAi trata os dados sob instruções da empresa para prestar o serviço, como operador,
+          exceto quando a lei atribuir papel diferente.
         </p>
       </Section>
 
@@ -196,69 +221,87 @@ function PrivacyPolicy() {
           <li>Dados de conta e autenticação, como nome, e-mail e identificadores técnicos.</li>
           <li>Dados da empresa usuária, configurações, plano e estado da assinatura.</li>
           <li>Dados de clientes da empresa inseridos no produto, como nome, contato, valores, vencimentos, histórico e observações de cobrança.</li>
-          <li>Dados técnicos e registros necessários para operação, diagnóstico, prevenção de fraude e segurança; categorias e retenção devem ser inventariadas.</li>
-          <li>Dados de pagamento/assinatura tratados pelo provedor de pagamentos. O RecebeAi não deve armazenar dados completos de cartão; confirmar na integração e no provedor.</li>
+          <li>Dados técnicos e registros de uso, diagnóstico, prevenção de fraude e segurança.</li>
+          <li>Dados de assinatura e transação recebidos do provedor de pagamento; os dados completos do cartão são tratados pelo provedor, não solicitados pelo RecebeAi.</li>
         </ul>
       </Section>
 
       <Section title="4. Finalidades e bases legais">
         <p className={paragraphClass}>
-          Os dados podem ser usados para fornecer a plataforma, autenticar usuários, organizar
-          recebíveis, prestar suporte, administrar assinaturas e pagamentos, manter a segurança e
-          cumprir obrigações legais. A base legal aplicável deve ser definida por finalidade e
-          categoria, incluindo execução de contrato, obrigação legal, exercício regular de direitos
-          ou legítimo interesse quando cabível. Não se deve inserir dado pessoal sem base legal e
-          informação adequada aos titulares.
+          Os dados são usados para criar e proteger contas, fornecer e manter a plataforma, organizar
+          recebíveis conforme instruções da empresa, processar assinaturas, responder solicitações,
+          prevenir fraude e cumprir obrigações legais. As bases legais variam por operação e incluem
+          execução de contrato, cumprimento de obrigação legal/regulatória, exercício regular de
+          direitos e, quando aplicável após avaliação, legítimo interesse. A empresa usuária deve
+          definir e documentar a base legal para os dados de seus próprios clientes e informá-los.
         </p>
       </Section>
 
       <Section title="5. Compartilhamento e fornecedores">
         <p className={paragraphClass}>
-          O funcionamento envolve provedores de hospedagem, banco de dados, autenticação e pagamento,
-          incluindo Supabase, Vercel e Mercado Pago conforme a configuração atual. A lista final deve
-          especificar entidades, serviços, finalidades, regiões de processamento, suboperadores e
-          eventuais transferências internacionais. Os dados não devem ser vendidos. O compartilhamento
-          deve ficar limitado ao necessário, às instruções do cliente e às obrigações legais.
+          Para operar o serviço, dados podem ser compartilhados com Supabase (banco/autenticação),
+          Vercel (hospedagem e funções) e Mercado Pago (assinatura e pagamento), além de prestadores
+          de suporte ou autoridades quando exigido por lei. Esses provedores podem processar dados
+          no Brasil ou no exterior, conforme infraestrutura, contratos e configurações de cada serviço.
+          O RecebeAi não vende dados pessoais. O acesso é limitado ao necessário para as finalidades
+          descritas e às instruções da empresa controladora.
         </p>
       </Section>
 
       <Section title="6. Retenção, segurança e incidentes">
         <p className={paragraphClass}>
-          O prazo de retenção por categoria, os critérios de eliminação e os dados mantidos em backups
-          ainda precisam ser definidos. São usados controles de acesso e isolamento entre empresas;
-          detalhes de segurança publicados devem corresponder à arquitetura e aos testes efetivamente
-          verificados. O procedimento para avaliar e comunicar incidentes deve ser formalizado,
-          observadas as regras e prazos legais aplicáveis.
+          Dados operacionais da conta e dados inseridos pela empresa são mantidos enquanto a conta
+          estiver ativa. Após encerramento, o titular da conta pode solicitar exportação durante
+          30 dias; os dados da conta e os dados operacionais identificáveis serão eliminados ou
+          anonimizados dos sistemas ativos em até 90 dias, ressalvados dados cuja conservação seja
+          necessária para obrigação legal/regulatória, prevenção a fraude ou exercício regular de
+          direitos. Registros de suporte são mantidos por até 2 anos após o encerramento do chamado,
+          salvo disputa ou obrigação legal. Registros de transações e documentos fiscais são retidos
+          pelo prazo legal aplicável. Registros técnicos de segurança são mantidos pelo prazo
+          necessário à segurança e às obrigações legais, normalmente por até 6 meses quando coletados.
+        </p>
+        <p className={paragraphClass}>
+          Backups técnicos seguem os ciclos de retenção oferecidos e configurados nos provedores e
+          podem permanecer até sua expiração rotativa; após restauração, uma exclusão anteriormente
+          solicitada pode precisar ser reaplicada. O prazo do backup do projeto Supabase depende do
+          plano e das configurações do projeto. Acesso a dados é limitado por controles de conta,
+          políticas de banco e privilégios. Em caso de incidente com risco ou dano relevante, o
+          controlador avaliará e fará as comunicações legalmente exigidas à ANPD e aos titulares.
         </p>
       </Section>
 
       <Section title="7. Direitos dos titulares">
         <p className={paragraphClass}>
-          Titulares podem solicitar, nos termos da LGPD, confirmação e acesso, correção, anonimização,
+          O titular pode solicitar confirmação de tratamento, acesso, correção, anonimização,
           bloqueio ou eliminação quando cabível, portabilidade conforme regulamentação, informação
-          sobre compartilhamento, revisão de decisões automatizadas quando aplicável, e revogação do
-          consentimento quando essa for a base legal. Pedidos sobre dados inseridos por uma empresa
-          usuária devem ser direcionados primeiro a essa empresa, que controla tais dados; o RecebeAi
-          dará apoio conforme o papel e as instruções aplicáveis. Solicitações ao operador do serviço:
-          <a className="ml-1 font-semibold text-blue-700 hover:underline" href="mailto:financeiro.saasrecebeai@gmail.com">
-            financeiro.saasrecebeai@gmail.com
+          sobre compartilhamento, revisão de decisões automatizadas aplicáveis e revogação do
+          consentimento quando essa for a base legal. O pedido será confirmado e atendido nos prazos
+          legais; informações simplificadas serão fornecidas imediatamente quando possível e a
+          declaração completa será fornecida no prazo legal. Pedidos relativos a dados inseridos por
+          uma empresa devem ser encaminhados àquela empresa controladora; o RecebeAi auxiliará o
+          controlador quando aplicável. Envie pedidos para{" "}
+          <a className="font-semibold text-blue-700 hover:underline" href={`mailto:${supportEmail}`}>
+            {supportEmail}
           </a>.
         </p>
       </Section>
 
       <Section title="8. Cookies, demonstração e menores">
         <p className={paragraphClass}>
-          O produto possui modo de demonstração com dados fictícios locais, separado da conta real.
-          Inventário de cookies, armazenamento local, analytics e tecnologias de terceiros deve ser
-          completado antes da versão final. O serviço é voltado a empresas e não deve receber dados
-          de crianças ou adolescentes sem avaliação jurídica e salvaguardas específicas.
+          O modo de demonstração usa dados fictícios locais e é separado da conta real. O serviço é
+          destinado a empresas e não é projetado para uso por crianças. Não insira dados de crianças
+          ou adolescentes, dados sensíveis ou dados excessivos, salvo se estritamente necessário,
+          autorizado e tratado de acordo com a legislação aplicável. O site usa armazenamento técnico
+          necessário para autenticação e funcionamento; tecnologias não essenciais, se adicionadas,
+          dependerão de informação e consentimento quando exigidos.
         </p>
       </Section>
 
       <Section title="9. Atualizações desta política">
         <p className={paragraphClass}>
-          A versão final deve indicar vigência e mecanismo para avisar alterações relevantes. Consulte
-          esta página e entre em contato pelo canal acima para dúvidas ou solicitações.
+          Esta Política vigora a partir de 03/10/2026. Alterações relevantes serão comunicadas por
+          aviso na plataforma ou pelo e-mail cadastrado; a data da atualização ficará indicada nesta
+          página. Dúvidas e solicitações podem ser enviadas ao canal indicado acima.
         </p>
       </Section>
     </PublicPage>
@@ -269,7 +312,7 @@ function Support() {
   return (
     <PublicPage
       title="Suporte"
-      description="Canal de atendimento do RecebeAi. Os prazos e horários ainda não foram definidos; não há SLA anunciado."
+      description="Canal e prazos de atendimento do RecebeAi."
       icon={LifeBuoy}
     >
       <Section title="Fale com o suporte">
@@ -296,9 +339,13 @@ function Support() {
 
       <Section title="Horário e prazo de resposta">
         <p className={paragraphClass}>
-          Horário de atendimento, prazo de primeira resposta, escalonamento e eventual suporte
-          prioritário ainda não foram definidos. Não há garantia de resposta em prazo específico.
-          Esses compromissos precisam ser estabelecidos antes da comercialização.
+          Atendimento em dias úteis, de segunda a sexta-feira, das 9h às 17h (horário de Brasília),
+          exceto feriados nacionais. O RecebeAi confirmará o recebimento de solicitações comuns em
+          até 1 dia útil e fornecerá uma resposta, plano de ação ou atualização em até 3 dias úteis.
+          Incidentes de segurança ou indisponibilidade ampla devem ser identificados no assunto do
+          e-mail e terão confirmação inicial em até 4 horas úteis dentro do horário de atendimento.
+          Esses prazos são de resposta inicial/atualização, não uma garantia de resolução nesse prazo.
+          Não há atendimento telefônico ou suporte 24 horas anunciado.
         </p>
       </Section>
 
