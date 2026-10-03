@@ -24,6 +24,7 @@ import IAFinanceira from './pages/IAFinanceira';
 import Recuperacao from './pages/Recuperacao';
 import Planos from './pages/Planos';
 import AdminPagamentos from './pages/AdminPagamentos';
+import { PrivacyPolicy, Support, TermsOfUse } from './pages/PublicInfo';
 
 export default function App() {
   return (
@@ -32,6 +33,9 @@ export default function App() {
         <Routes>
           {/* 1. Primeira página do aplicativo: Landing Page de vendas e conversão */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/termos" element={<TermsOfUse />} />
+          <Route path="/privacidade" element={<PrivacyPolicy />} />
+          <Route path="/suporte" element={<Support />} />
 
           {/* 2. Rotas públicas de Autenticação Multi-empresa */}
           <Route path="/login" element={<Login />} />

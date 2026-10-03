@@ -37,6 +37,18 @@ const deployWorkflow = readFileSync(
 	new URL('./.github/workflows/deploy.yml', import.meta.url),
 	'utf8',
 );
+const publicInfoPage = readFileSync(
+	new URL('./src/pages/PublicInfo.jsx', import.meta.url),
+	'utf8',
+);
+const landingPage = readFileSync(
+	new URL('./src/pages/LandingPage.jsx', import.meta.url),
+	'utf8',
+);
+const backupRunbook = readFileSync(
+	new URL('./docs/backup-e-restauracao.md', import.meta.url),
+	'utf8',
+);
 for (const constraint of [
 	'recebiveis_cliente_empresa_fkey',
 	'cobrancas_cliente_empresa_fkey',
@@ -76,6 +88,11 @@ assert.match(deployWorkflow, /supabase start/);
 assert.match(deployWorkflow, /supabase db reset/);
 assert.match(deployWorkflow, /supabase db query --local --file supabase\/tests\/tenant_isolation\.sql/);
 assert.doesNotMatch(deployWorkflow, /supabase db query --linked --file supabase\/tests\/tenant_isolation\.sql/);
+assert.match(publicInfoPage, /financeiro\.saasrecebeai@gmail\.com/);
+assert.match(landingPage, /to="\/termos"/);
+assert.match(landingPage, /to="\/privacidade"/);
+assert.match(landingPage, /to="\/suporte"/);
+assert.match(backupRunbook, /não incluem os objetos armazenados pelo Supabase Storage/i);
 console.log('- RLS restritiva e relações compostas de tenant cobertas pela migration -> ✅ OK');
 
 const demoStorage = new Map([

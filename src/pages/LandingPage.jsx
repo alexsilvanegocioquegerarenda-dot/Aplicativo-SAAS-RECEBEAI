@@ -682,6 +682,11 @@ export default function LandingPage() {
             <Link to="/login" className="hover:text-slate-300 transition-colors">Área do Cliente</Link>
             <Link to="/cadastro" className="hover:text-slate-300 transition-colors">Criar Empresa</Link>
           </div>
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+            <Link to="/termos" className="hover:text-slate-300 transition-colors">Termos de Uso</Link>
+            <Link to="/privacidade" className="hover:text-slate-300 transition-colors">Privacidade e LGPD</Link>
+            <Link to="/suporte" className="hover:text-slate-300 transition-colors">Suporte</Link>
+          </div>
           <div>
             © {new Date().getFullYear()} RecebeAi. Todos os direitos reservados.
           </div>

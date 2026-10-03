@@ -98,6 +98,15 @@ O fluxo manual é uma alternativa de revisão para assinaturas pendentes: o clie
 
 Antes da comercialização, teste os fluxos automático e manual, além de criação, renovação, rejeição e cancelamento com a conta Mercado Pago do proprietário. Revise também os termos, privacidade, cancelamento e reembolso aplicáveis ao negócio. Como não há empresas reais legadas no banco neste momento, as novas contas começam pendentes e só recebem acesso após confirmação de pagamento.
 
+### Materiais de lançamento
+
+- Termos de Uso: página pública em `/termos`, acessível pelo rodapé da landing page.
+- Política de Privacidade/LGPD: página pública em `/privacidade`, acessível pelo rodapé.
+- Suporte: página pública em `/suporte`; contato informado: `financeiro.saasrecebeai@gmail.com`.
+- Backup e restauração: [`docs/backup-e-restauracao.md`](docs/backup-e-restauracao.md), procedimento interno.
+
+**Atenção:** Termos, Privacidade e Suporte estão publicados como documentos preliminares, não como política comercial ou jurídica final. Antes de aceitar clientes pagantes, confirme identificação fiscal/endereço do fornecedor, condições completas de cobrança/cancelamento/reembolso, prazos e canais de suporte, retenção, fornecedores/suboperadores e fluxos LGPD; submeta os textos a revisão jurídica. Não cadastre dados reais de clientes de terceiros até validar o isolamento com duas contas independentes em teste controlado.
+
 ## 🚀 Deploy na Vercel
 1. **Deploy**:
    - O projeto já conta com o arquivo [`vercel.json`](vercel.json) configurado para roteamento SPA sem erros de 404 ao recarregar a página.
