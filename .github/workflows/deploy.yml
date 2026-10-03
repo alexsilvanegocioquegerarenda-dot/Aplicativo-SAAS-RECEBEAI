@@ -34,6 +34,26 @@ jobs:
       - name: Validar build de produção
         run: npm run build
 
+      - name: Configurar Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Inicializar configuração local do Supabase
+        run: |
+          if [ ! -f supabase/config.toml ]; then
+            supabase init
+          fi
+
+      - name: Iniciar Supabase local para testes
+        run: supabase start
+
+      - name: Aplicar migrations no banco local
+        run: supabase db reset --no-seed
+
+      - name: Testar isolamento entre empresas localmente
+        run: supabase db query --local --file supabase/tests/tenant_isolation.sql
+
   deploy:
     name: Aplicar migrations e publicar
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -85,11 +105,6 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: supabase db push --linked --password "$SUPABASE_DB_PASSWORD" --yes
-
-      - name: Testar isolamento entre empresas no Supabase
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: supabase db query --linked --file supabase/tests/tenant_isolation.sql
 
       - name: Configurar Node.js para Vercel CLI
         uses: actions/setup-node@v4
