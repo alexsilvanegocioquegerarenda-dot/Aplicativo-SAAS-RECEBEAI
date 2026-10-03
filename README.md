@@ -50,10 +50,10 @@ Configure estes **Actions secrets** no repositório do GitHub (`Settings > Secre
 - `SUPABASE_PROJECT_ID`: referência do projeto Supabase.
 - `SUPABASE_DB_PASSWORD`: senha do banco PostgreSQL do projeto.
 - `VERCEL_TOKEN`: token de acesso da Vercel.
-- `VERCEL_ORG_ID`: ID da equipe/conta da Vercel.
+- `VERCEL_ORG_ID`: ID da equipe/conta da Vercel (`orgId` do `.vercel/project.json`).
 - `VERCEL_PROJECT_ID`: ID do projeto Vercel conectado a este repositório.
 
-O job de deploy usa o ambiente GitHub `production`; secrets cadastrados nesse ambiente ficam disponíveis para ele. `VERCEL_ORG_ID` deve ser o ID ou slug da equipe com acesso ao projeto, sem espaços ou quebras de linha.
+O job de deploy usa o ambiente GitHub `production`; secrets cadastrados nesse ambiente ficam disponíveis para ele. `VERCEL_ORG_ID` deve ser o `orgId` da conta/equipe que possui o projeto, copiado do `.vercel/project.json`, sem espaços ou quebras de linha. O usuário dono do token precisa ter acesso a essa conta e ao projeto.
 
 Configure também, nas variáveis de ambiente de **produção** do projeto Vercel, os valores usados pelo frontend:
    ```env
