@@ -211,6 +211,8 @@ BEGIN
   PERFORM set_config('role', db_role, TRUE);
   PERFORM set_config('request.jwt.claim.sub', '', TRUE);
   PERFORM set_config('request.jwt.claims', '{}', TRUE);
+  DELETE FROM public.manual_billing_reviews
+  WHERE empresa_id IN (company_a, company_b);
   DELETE FROM auth.users WHERE id IN (user_a, user_b);
   DELETE FROM public.billing_webhook_events WHERE event_key IN (event_a, event_b);
 END;
