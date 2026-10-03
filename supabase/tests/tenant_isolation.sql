@@ -132,8 +132,13 @@ BEGIN
     END IF;
   END LOOP;
 
-  SELECT COUNT(*) INTO visible_count FROM public.billing_webhook_events;
-  IF visible_count <> 0 THEN
+  rejected := FALSE;
+  BEGIN
+    PERFORM 1 FROM public.billing_webhook_events LIMIT 1;
+  EXCEPTION WHEN insufficient_privilege THEN
+    rejected := TRUE;
+  END;
+  IF NOT rejected THEN
     RAISE EXCEPTION 'Tenant isolation failed: authenticated client can read webhook events.';
   END IF;
 
