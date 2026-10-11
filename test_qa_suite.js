@@ -270,6 +270,7 @@ assert.equal(getProtectedRouteDecision({ loadingAuth: false, user: { id: 'u1' },
 assert.equal(getProtectedRouteDecision({ loadingAuth: false, user: { id: 'u1' }, subscriptionStatus: 'pending', pathname: '/planos' }), 'allow');
 assert.equal(getProtectedRouteDecision({ loadingAuth: false, user: { id: 'u1' }, subscriptionStatus: 'pending', pathname: '/admin/pagamentos' }), 'allow');
 assert.equal(getProtectedRouteDecision({ loadingAuth: false, user: { id: 'forged', role: 'admin' }, requireAdmin: true, isAdmin: false }), 'forbidden');
+assert.equal(getProtectedRouteDecision({ loadingAuth: false, user: { id: 'admin', role: 'admin' }, requireAdmin: true, isAdmin: true }), 'allow');
 
 let empresaLookup = null;
 const authenticatedProfile = await resolveAuthenticatedProfile({
@@ -292,6 +293,37 @@ assert.deepEqual(empresaLookup, {
 });
 assert.equal(authenticatedProfile.empresa_id, 'empresa-remota');
 assert.equal(authenticatedProfile.subscription_status, 'active');
+const masterProfile = await resolveAuthenticatedProfile({
+	from: () => {
+		throw new Error('Administrador master não deve precisar de empresa vinculada.');
+	},
+}, {
+	id: 'auth-admin-master',
+	email: 'admin@example.com',
+	app_metadata: { role: 'admin' },
+	user_metadata: { nome: 'Admin Real' },
+});
+assert.equal(masterProfile.role, 'admin');
+assert.equal(masterProfile.nome, 'Admin Real');
+assert.equal(masterProfile.empresa_id, null);
+assert.equal(masterProfile.subscription_status, 'active');
+const userMetadataAdmin = await resolveAuthenticatedProfile({
+	from: () => ({
+		select: () => ({
+			eq: () => ({
+				maybeSingle: async () => ({
+					data: { id: 'empresa-normal', razao_social: 'Empresa Normal' },
+					error: null,
+				}),
+			}),
+		}),
+	}),
+}, {
+	id: 'auth-user-normal',
+	email: 'user@example.com',
+	user_metadata: { role: 'admin' },
+});
+assert.equal(userMetadataAdmin.role, 'cliente');
 await assert.rejects(
 	resolveAuthenticatedProfile({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }) }, { id: 'auth-user-sem-empresa' }),
 	/empresa vinculada/

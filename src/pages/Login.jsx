@@ -202,7 +202,13 @@ export default function Login() {
                   : "bg-amber-600 hover:bg-amber-500 shadow-amber-600/30"
               }`}
             >
-              <span>{carregando ? "Autenticando..." : "Entrar no Painel da Empresa"}</span>
+              <span>
+                {carregando
+                  ? "Autenticando..."
+                  : tipoLogin === "admin"
+                    ? "Entrar como Administrador Master"
+                    : "Entrar no Painel da Empresa"}
+              </span>
               <ArrowRight className="h-4 w-4" />
             </button>
           </form>

@@ -247,7 +247,7 @@ export function AuthProvider({ children }) {
     return result.user;
   };
 
-  const isAdmin = demoSession && user?.role === "admin";
+  const isAdmin = user?.role === "admin";
   const currentEmpresaId = user?.empresa_id || null;
 
   return (

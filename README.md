@@ -79,6 +79,18 @@ O fluxo automático usa assinaturas mensais do Mercado Pago: o servidor cria o c
 
 Os registros fictícios de marketing/demonstração são mantidos isolados no navegador e só aparecem na sessão explícita de demonstração. Ao iniciar um login real ou cadastro, o app remove os dados locais da demonstração sem apagar contas, sessões ou preferências; os dados das empresas reais são carregados exclusivamente do Supabase.
 
+### Acesso do administrador master
+
+O botão **Demo Master** abre apenas dados fictícios locais. Para habilitar uma conta real, crie/convide o usuário em `Authentication > Users` no Supabase e marque `app_metadata.role` como `admin` usando a Auth Admin API em um ambiente confiável (backend ou script local protegido com a chave `service_role`). Exemplo no servidor, após obter o `userId`:
+
+```js
+await supabase.auth.admin.updateUserById(userId, {
+  app_metadata: { role: "admin" },
+});
+```
+
+O frontend só considera `app_metadata.role` (metadado gerenciado pelo servidor); `user_metadata` não concede privilégios. Nunca coloque a chave `service_role` no frontend, em variáveis `VITE_*` ou no repositório. Depois de atribuir o papel, encerre e inicie a sessão novamente para atualizar as claims. Esse administrador não precisa de uma empresa vinculada.
+
 Configure estas variáveis no ambiente de **produção da Vercel** (e também no preview/local de teste, quando aplicável):
 
 ```env

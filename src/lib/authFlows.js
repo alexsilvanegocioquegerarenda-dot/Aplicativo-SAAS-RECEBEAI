@@ -160,6 +160,20 @@ export async function signOutFromSupabase(auth, clearLocalState) {
 export async function resolveAuthenticatedProfile(supabase, authUser) {
   if (!authUser?.id) throw new Error("Usuário Supabase inválido.");
 
+  if (authUser.app_metadata?.role === "admin") {
+    return {
+      id: authUser.id,
+      email: authUser.email,
+      nome: authUser.user_metadata?.nome || "Administrador Master",
+      role: "admin",
+      cargo: "Super Administrador Master",
+      empresa_id: null,
+      empresa_nome: "RecebeAi Tecnologia",
+      plano: "enterprise",
+      subscription_status: "active",
+    };
+  }
+
   const { data: empresa, error } = await supabase
     .from("empresas")
     .select("id, razao_social, cnpj, telefone, plano, subscription_status")
