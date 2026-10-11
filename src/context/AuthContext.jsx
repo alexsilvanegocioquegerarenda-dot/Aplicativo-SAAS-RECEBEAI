@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { supabase, isSupabaseConfigured } from "@/api/supabaseClient";
 import { base44, clearDemoData, disableDemoMode } from "@/api/base44Client";
-import { getInitialAuthState, loadCurrentSupabaseUser, registerWithSupabase, resolveAuthenticatedProfile, signInWithSupabase, signOutFromSupabase } from "@/lib/authFlows";
+import { getInitialAuthState, loadCurrentSupabaseUser, MASTER_ADMIN_EMAIL, registerWithSupabase, resolveAuthenticatedProfile, signInWithSupabase, signOutFromSupabase } from "@/lib/authFlows";
 
 const AuthContext = createContext(null);
 
@@ -247,7 +247,10 @@ export function AuthProvider({ children }) {
     return result.user;
   };
 
-  const isAdmin = user?.role === "admin";
+  const isAdmin = demoSession
+    ? user?.id === DEFAULT_USERS.admin.id
+    : user?.role === "admin" &&
+      user?.email?.trim().toLowerCase() === MASTER_ADMIN_EMAIL;
   const currentEmpresaId = user?.empresa_id || null;
 
   return (

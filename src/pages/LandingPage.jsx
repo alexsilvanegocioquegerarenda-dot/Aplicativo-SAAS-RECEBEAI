@@ -69,13 +69,15 @@ export default function LandingPage() {
       id: "enterprise",
       nome: "Enterprise",
       badge: "Corporativo",
-      preco: null,
-      descricao: "Plano ainda indisponível para contratação automática.",
+      preco: 799,
+      descricao: "Estrutura para empresas que precisam de multiusuários, suporte e escalabilidade.",
       destaque: false,
       isEnterprise: true,
       recursos: [
-        "Escopo e disponibilidade sob avaliação",
-        "Não inclui recursos ou prazos de atendimento não confirmados",
+        "Recursos do plano Profissional",
+        "Multiusuários e gestão corporativa",
+        "Suporte prioritário e onboarding personalizado",
+        "Integração e automações avançadas",
       ],
       cta: "Contratar Enterprise",
     },
@@ -338,7 +340,7 @@ export default function LandingPage() {
                     </span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-800/30 text-xs text-slate-300 leading-relaxed font-mono">
-                    "Olá Mariana! Lembramos que a fatura <strong>NF-2024-101</strong> no valor de <strong>R$ 4.500,00</strong> venceu há 3 dias. Para regularizar agora sem juros adicionais, utilize o PIX Copia e Cola: <code>pix@suaempresa.com.br</code>"
+                    `Olá Mariana! Lembramos que a fatura <strong>NF-${new Date().getFullYear()}-101</strong> no valor de <strong>R$ 4.500,00</strong> venceu há 3 dias. Para regularizar agora sem juros adicionais, utilize o PIX Copia e Cola: <code>pix@suaempresa.com.br</code>`
                   </div>
                 </div>
 
@@ -530,17 +532,13 @@ export default function LandingPage() {
 
                   {/* Preço */}
                     <div className="flex items-baseline gap-1 mb-6 pb-6 border-b border-slate-800">
-                      {plano.preco == null ? (
-                        <span className="text-2xl font-bold text-white">Indisponível no momento</span>
-                      ) : (
-                        <>
-                          <span className="text-sm text-slate-400 font-medium">R$</span>
-                          <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
-                            {plano.preco}
-                          </span>
-                          <span className="text-sm text-slate-400 font-medium">,00/mês</span>
-                        </>
-                      )}
+                      <>
+                        <span className="text-sm text-slate-400 font-medium">R$</span>
+                        <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
+                          {plano.preco}
+                        </span>
+                        <span className="text-sm text-slate-400 font-medium">,00/mês</span>
+                      </>
                     </div>
 
                   {/* Recursos */}
@@ -570,27 +568,17 @@ export default function LandingPage() {
                 </div>
 
                 {/* Botão de Contratação */}
-                {plano.id === "enterprise" ? (
-                  <button
-                    type="button"
-                    disabled
-                    className="w-full py-3.5 px-6 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 bg-slate-800 text-slate-400 cursor-not-allowed"
-                  >
-                    <span>Indisponível no momento</span>
-                  </button>
-                ) : (
-                  <Link
-                    to={`/cadastro?plano=${plano.id}`}
-                    className={`w-full py-3.5 px-6 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-sm ${
-                    plano.destaque
-                      ? "bg-emerald-500 hover:bg-emerald-400 text-white shadow-emerald-500/25"
-                      : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700"
-                    }`}
-                  >
-                    <span>{plano.cta}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                )}
+                <Link
+                  to={`/cadastro?plano=${plano.id}`}
+                  className={`w-full py-3.5 px-6 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-sm ${
+                  plano.destaque
+                    ? "bg-emerald-500 hover:bg-emerald-400 text-white shadow-emerald-500/25"
+                    : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700"
+                  }`}
+                >
+                  <span>{plano.cta}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
             );
           })}

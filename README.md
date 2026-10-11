@@ -81,7 +81,7 @@ Os registros fictícios de marketing/demonstração são mantidos isolados no na
 
 ### Acesso do administrador master
 
-O botão **Demo Master** abre apenas dados fictícios locais. Para habilitar uma conta real, crie/convide o usuário em `Authentication > Users` no Supabase e marque `app_metadata.role` como `admin` usando a Auth Admin API em um ambiente confiável (backend ou script local protegido com a chave `service_role`). Exemplo no servidor, após obter o `userId`:
+O botão **Demo Master** abre apenas dados fictícios locais. Para habilitar o administrador real designado, crie/convide `financeiro.saasrecebeai@gmail.com` em `Authentication > Users` no Supabase e marque `app_metadata.role` como `admin` usando a Auth Admin API em um ambiente confiável (backend ou script local protegido com a chave `service_role`). O frontend só concede o papel Master real se **ambos** o e-mail normalizado corresponder a esse endereço e `app_metadata.role` for `admin`; marcar outro usuário como admin não lhe concede acesso Master. Exemplo no servidor, após obter o `userId`:
 
 ```js
 await supabase.auth.admin.updateUserById(userId, {
@@ -89,7 +89,9 @@ await supabase.auth.admin.updateUserById(userId, {
 });
 ```
 
-O frontend só considera `app_metadata.role` (metadado gerenciado pelo servidor); `user_metadata` não concede privilégios. Nunca coloque a chave `service_role` no frontend, em variáveis `VITE_*` ou no repositório. Depois de atribuir o papel, encerre e inicie a sessão novamente para atualizar as claims. Esse administrador não precisa de uma empresa vinculada.
+`user_metadata` não concede privilégios. Nunca coloque a chave `service_role` no frontend, em variáveis `VITE_*` ou no repositório. Depois de atribuir o papel, encerre e inicie a sessão novamente para atualizar as claims. Esse administrador não precisa de uma empresa vinculada. A Demo Master usa exclusivamente dados fictícios locais; o papel real não ignora RLS nem permite consultar dados de outras empresas.
+
+Para localizar e promover a conta sem executar SQL, use `.\scripts\set-master-admin.ps1` no PowerShell, dentro da pasta do projeto. O script solicita a chave Service Role sem exibi-la, exige encontrar exatamente uma conta confirmada com o e-mail definido, preserva os demais campos de `app_metadata` e verifica a atualização pela Admin API. Ele não cria contas, altera outras contas, modifica o banco ou executa migrations. Execute-o apenas em uma máquina confiável; a chave não deve ser salva no `.env`, no repositório ou compartilhada.
 
 Configure estas variáveis no ambiente de **produção da Vercel** (e também no preview/local de teste, quando aplicável):
 
@@ -104,7 +106,7 @@ BILLING_ADMIN_EMAILS=admin1@seudominio.com,admin2@seudominio.com
 
 `SUPABASE_SERVICE_ROLE_KEY`, `MP_ACCESS_TOKEN` e `MP_WEBHOOK_SECRET` são segredos exclusivos do servidor. Não use prefixo `VITE_` e não os coloque no navegador, em arquivos versionados ou no GitHub Actions log. A URL pública e chave publishable do Supabase continuam configuradas como `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
 
-No Mercado Pago, habilite as notificações de assinatura `subscription_preapproval` e `subscription_authorized_payment` para `https://seu-dominio-de-producao/api/billing/webhook` e configure a mesma chave secreta em `MP_WEBHOOK_SECRET`. Faça primeiro testes com credenciais e assinaturas de teste. O plano Enterprise segue indisponível.
+No Mercado Pago, habilite as notificações de assinatura `subscription_preapproval` e `subscription_authorized_payment` para `https://seu-dominio-de-producao/api/billing/webhook` e configure a mesma chave secreta em `MP_WEBHOOK_SECRET`. Faça primeiro testes com credenciais e assinaturas de teste. O Enterprise é um plano mensal de R$ 799; como os demais planos, depende da configuração das credenciais e da validação do checkout em produção.
 
 O fluxo manual é uma alternativa de revisão para assinaturas pendentes: o cliente solicita análise e um operador verifica o ID e o pagamento no painel do Mercado Pago antes de aprovar. Configure `BILLING_ADMIN_EMAILS` com e-mails confirmados do Supabase; a fila restrita fica em `/admin/pagamentos`. A decisão exige justificativa e é registrada. A observação enviada pelo cliente não é prova de pagamento.
 

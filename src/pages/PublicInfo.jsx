@@ -122,11 +122,10 @@ function TermsOfUse() {
       <Section title="6. Planos, cobrança, cancelamento e reembolso">
         <p className={paragraphClass}>
           Os planos disponíveis e seus preços são os exibidos na página de contratação antes do
-          pagamento. Os planos Essencial e Profissional são cobrados mensalmente, com renovação
-          automática até o cancelamento; o plano Enterprise não está disponível para contratação
-          automática. O preço, período, tributos e forma de pagamento aplicáveis são apresentados
-          antes de confirmar cada contratação. A assinatura é ativada após confirmação do pagamento
-          pelo provedor e pelo RecebeAi.
+          pagamento. Os planos Essencial, Profissional e Enterprise são cobrados mensalmente, com
+          renovação automática até o cancelamento. O preço, período, tributos e forma de pagamento
+          aplicáveis são apresentados antes de confirmar cada contratação. A assinatura é ativada
+          após confirmação do pagamento pelo provedor e pelo RecebeAi.
         </p>
         <p className={paragraphClass}>
           O cliente pode cancelar a assinatura a qualquer momento na área da conta ou solicitando

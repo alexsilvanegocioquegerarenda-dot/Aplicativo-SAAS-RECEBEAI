@@ -27,6 +27,8 @@ export default function Planos() {
   const [statusMessage, setStatusMessage] = useState(null);
   const [cancelandoAssinatura, setCancelandoAssinatura] = useState(false);
   const [canCancelSubscription, setCanCancelSubscription] = useState(false);
+  const [billingStatus, setBillingStatus] = useState("checking");
+  const [checkingBilling, setCheckingBilling] = useState(true);
   const [canRequestManualReview, setCanRequestManualReview] = useState(false);
   const [manualReviewStatus, setManualReviewStatus] = useState(null);
   const [mensagemRevisao, setMensagemRevisao] = useState("");
@@ -36,6 +38,8 @@ export default function Planos() {
     let active = true;
     const status = searchParams.get("status");
     if (demoSession) {
+      setBillingStatus("none");
+      setCheckingBilling(false);
       if (status === "success") {
         setStatusMessage({
           type: "warning",
@@ -46,8 +50,11 @@ export default function Planos() {
       return () => { active = false; };
     }
 
+    setCheckingBilling(true);
     fetchBillingStatus().then((billing) => {
       if (!active) return;
+      setBillingStatus(billing.status);
+      setCheckingBilling(false);
       setCanCancelSubscription(billing.canCancel);
       setCanRequestManualReview(billing.canRequestManualReview);
       setManualReviewStatus(billing.manualReviewStatus);
@@ -72,6 +79,8 @@ export default function Planos() {
       }
     }).catch((error) => {
       if (active) {
+        setBillingStatus("unknown");
+        setCheckingBilling(false);
         setStatusMessage({
           type: "warning",
           title: "Não foi possível consultar a assinatura",
@@ -90,8 +99,9 @@ export default function Planos() {
     return () => { active = false; };
   }, [demoSession, refreshUserProfile, searchParams, user?.subscription_status]);
 
+  const isSubscriptionBlockingCheckout = ["active", "past_due"].includes(billingStatus);
+
   const handleAssinar = async (planoKey) => {
-    if (planoKey === "enterprise") return;
     try {
       setLoadingPlano(planoKey);
       await startMercadoPagoCheckout(planoKey);
@@ -110,6 +120,7 @@ export default function Planos() {
     setCancelandoAssinatura(true);
     try {
       await cancelMercadoPagoSubscription();
+      setBillingStatus("canceled");
       const updatedUser = await refreshUserProfile();
       setCanCancelSubscription(false);
       setStatusMessage({
@@ -195,12 +206,15 @@ export default function Planos() {
       id: "enterprise",
       nome: "Enterprise",
       badge: "Corporativo",
-      descricao: "Plano ainda indisponível para contratação automática.",
-      preco: null,
+      descricao: "Estrutura para empresas que precisam de multiusuários, suporte e escalabilidade.",
+      preco: 799,
       destaque: false,
       isEnterprise: true,
       recursos: [
-        "A contratação será disponibilizada após definição de escopo e condições."
+        "Recursos do plano Profissional",
+        "Multiusuários e gestão corporativa",
+        "Suporte prioritário e onboarding personalizado",
+        "Integração e automações avançadas"
       ],
       cta: "Contratar Enterprise",
       corBadge: "bg-purple-600 text-white"
@@ -238,7 +252,7 @@ export default function Planos() {
           Recupere mais recebíveis com o plano certo
         </h1>
         <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-          Assinaturas mensais de R$ 149 (Essencial) e R$ 349 (Profissional). Confira as condições apresentadas pelo Mercado Pago antes de contratar.
+          Assinaturas mensais a partir de R$ 149. Essencial por R$ 149, Profissional por R$ 349 e Enterprise por R$ 799. Confira as condições apresentadas pelo Mercado Pago antes de contratar.
         </p>
 
         {/* Badge Informativa */}
@@ -309,10 +323,10 @@ export default function Planos() {
         </form>
       )}
 
-      {canCancelSubscription && ["active", "past_due"].includes(user?.subscription_status) && (
+      {canCancelSubscription && isSubscriptionBlockingCheckout && (
         <section className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
           <p className="font-semibold">Plano atual: {user.plano}</p>
-          <p className="mt-1">Alterações de plano ainda não estão disponíveis. Você pode cancelar a assinatura recorrente abaixo.</p>
+          <p className="mt-1">Cancele a assinatura atual no Mercado Pago antes de contratar outro plano. Após o cancelamento, Essencial, Profissional e Enterprise ficam disponíveis.</p>
           <button
             type="button"
             onClick={handleCancelarAssinatura}
@@ -372,17 +386,13 @@ export default function Planos() {
 
                 {/* Preço */}
                 <div className="flex items-baseline gap-1 mb-6 pb-6 border-b border-gray-100 dark:border-gray-800">
-                  {plano.preco == null ? (
-                    <span className="text-xl font-bold text-gray-500">Indisponível no momento</span>
-                  ) : (
-                    <>
-                      <span className="text-sm text-gray-500 font-medium">R$</span>
-                      <span className="text-4xl sm:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-                        {plano.preco}
-                      </span>
-                      <span className="text-sm text-gray-500 font-medium">,00/mês</span>
-                    </>
-                  )}
+                  <>
+                    <span className="text-sm text-gray-500 font-medium">R$</span>
+                    <span className="text-4xl sm:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                      {plano.preco}
+                    </span>
+                    <span className="text-sm text-gray-500 font-medium">,00/mês</span>
+                  </>
                 </div>
 
                 {/* Lista de Recursos */}
@@ -414,7 +424,7 @@ export default function Planos() {
               {/* Botão CTA */}
               <button
                 onClick={() => handleAssinar(plano.id)}
-                disabled={isLoading || plano.id === "enterprise" || ["active", "past_due"].includes(user?.subscription_status)}
+                disabled={isLoading || checkingBilling || isSubscriptionBlockingCheckout}
                 className={`w-full py-3.5 px-6 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 shadow-sm ${
                   plano.destaque
                     ? "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-emerald-600/20"
@@ -430,7 +440,7 @@ export default function Planos() {
                   </>
                 ) : (
                   <>
-                    <span>{plano.id === "enterprise" ? "Indisponível no momento" : plano.cta}</span>
+                    <span>{plano.cta}</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}

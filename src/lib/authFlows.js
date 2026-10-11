@@ -1,3 +1,5 @@
+export const MASTER_ADMIN_EMAIL = "financeiro.saasrecebeai@gmail.com";
+
 function failure(error, fallbackMessage) {
   return {
     success: false,
@@ -100,7 +102,7 @@ export async function registerWithSupabase(supabase, formData) {
         telefone: formData.telefone || "",
         email,
         plano: formData.plano,
-        limite_titulos: formData.plano === "enterprise" ? 999999 : formData.plano === "profissional" ? 2000 : 300,
+        limite_titulos: formData.plano === "enterprise" ? 99999 : formData.plano === "profissional" ? 2000 : 300,
       })
       .select("id, razao_social, cnpj, telefone, plano, subscription_status")
       .single();
@@ -160,7 +162,10 @@ export async function signOutFromSupabase(auth, clearLocalState) {
 export async function resolveAuthenticatedProfile(supabase, authUser) {
   if (!authUser?.id) throw new Error("Usuário Supabase inválido.");
 
-  if (authUser.app_metadata?.role === "admin") {
+  if (
+    authUser.app_metadata?.role === "admin" &&
+    authUser.email?.trim().toLowerCase() === MASTER_ADMIN_EMAIL
+  ) {
     return {
       id: authUser.id,
       email: authUser.email,

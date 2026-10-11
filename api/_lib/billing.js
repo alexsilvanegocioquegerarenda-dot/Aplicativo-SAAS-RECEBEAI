@@ -11,6 +11,11 @@ export const BILLING_PLANS = {
     amount: 349,
     titleLimit: 2000,
   },
+  enterprise: {
+    name: "RecebeAi Enterprise",
+    amount: 799,
+    titleLimit: 99999,
+  },
 };
 
 export function getMercadoPagoNotification(req) {

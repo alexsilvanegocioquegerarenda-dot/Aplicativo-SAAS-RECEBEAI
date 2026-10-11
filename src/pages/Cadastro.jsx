@@ -22,7 +22,7 @@ export default function Cadastro() {
   const { register } = useAuth();
 
   const planoSolicitado = searchParams.get("plano");
-  const planoInicial = ["essencial", "profissional"].includes(planoSolicitado)
+  const planoInicial = ["essencial", "profissional", "enterprise"].includes(planoSolicitado)
     ? planoSolicitado
     : "profissional";
 
@@ -59,8 +59,8 @@ export default function Cadastro() {
     {
       id: "enterprise",
       nome: "Enterprise",
-      preco: "Indisponível",
-      desc: "Ainda não disponível para contratação",
+      preco: "R$ 799/mês",
+      desc: "Corporativo, multiusuários e integrações avançadas",
       destaque: false,
     },
   ];
@@ -168,9 +168,8 @@ export default function Cadastro() {
                     <button
                       type="button"
                       key={p.id}
-                      disabled={p.id === "enterprise"}
                       onClick={() => setFormData({ ...formData, plano: p.id })}
-                      className={`relative text-left p-4 rounded-2xl border transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
+                      className={`relative text-left p-4 rounded-2xl border transition-all ${
                         isSelected
                           ? "border-emerald-500 bg-emerald-500/10 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500"
                           : "border-slate-800 bg-slate-950/60 hover:border-slate-700"

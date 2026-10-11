@@ -22,6 +22,8 @@ import {
   Zap
 } from "lucide-react";
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 // Empresas assinantes cadastradas na plataforma SaaS (visão exclusiva do administrador)
 const EMPRESAS_SAAS_INICIAIS = [
   {
@@ -35,7 +37,7 @@ const EMPRESAS_SAAS_INICIAIS = [
     valor_mensalidade: 349.0,
     status: "ativo",
     titulos_ativos: 48,
-    data_adesao: "2024-01-10",
+    data_adesao: `${CURRENT_YEAR}-01-10`,
   },
   {
     id: "tenant-2",
@@ -48,7 +50,7 @@ const EMPRESAS_SAAS_INICIAIS = [
     valor_mensalidade: 799.0,
     status: "ativo",
     titulos_ativos: 215,
-    data_adesao: "2024-02-01",
+    data_adesao: `${CURRENT_YEAR}-02-01`,
   },
   {
     id: "tenant-3",
@@ -61,7 +63,7 @@ const EMPRESAS_SAAS_INICIAIS = [
     valor_mensalidade: 149.0,
     status: "ativo",
     titulos_ativos: 28,
-    data_adesao: "2024-01-15",
+    data_adesao: `${CURRENT_YEAR}-01-15`,
   },
   {
     id: "tenant-4",
@@ -74,7 +76,7 @@ const EMPRESAS_SAAS_INICIAIS = [
     valor_mensalidade: 149.0,
     status: "ativo",
     titulos_ativos: 14,
-    data_adesao: "2024-02-12",
+    data_adesao: `${CURRENT_YEAR}-02-12`,
   },
   {
     id: "tenant-5",
@@ -87,7 +89,7 @@ const EMPRESAS_SAAS_INICIAIS = [
     valor_mensalidade: 349.0,
     status: "ativo",
     titulos_ativos: 85,
-    data_adesao: "2024-02-20",
+    data_adesao: `${CURRENT_YEAR}-02-20`,
   },
   {
     id: "tenant-6",
@@ -100,7 +102,7 @@ const EMPRESAS_SAAS_INICIAIS = [
     valor_mensalidade: 799.0,
     status: "ativo",
     titulos_ativos: 340,
-    data_adesao: "2024-03-01",
+    data_adesao: `${CURRENT_YEAR}-03-01`,
   },
   {
     id: "tenant-7",
@@ -113,7 +115,7 @@ const EMPRESAS_SAAS_INICIAIS = [
     valor_mensalidade: 349.0,
     status: "pendente", // Pendência de pagamento no Mercado Pago
     titulos_ativos: 32,
-    data_adesao: "2024-03-05",
+    data_adesao: `${CURRENT_YEAR}-03-05`,
   },
 ];
 
@@ -329,9 +331,9 @@ export default function AdminDashboard() {
               className="rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-1.5 text-xs text-slate-700 focus:bg-white focus:border-blue-500 focus:outline-none"
             >
               <option value="todos">Todos os Planos</option>
-              <option value="starter">Starter (R$ 119)</option>
-              <option value="pro">Profissional (R$ 299)</option>
-              <option value="enterprise">Enterprise (R$ 699)</option>
+              <option value="starter">Starter (R$ 149)</option>
+              <option value="pro">Profissional (R$ 349)</option>
+              <option value="enterprise">Enterprise (R$ 799)</option>
             </select>
           </div>
         </div>

@@ -19,8 +19,8 @@ export const MERCADO_PAGO_PLANS = {
     id: "enterprise",
     alias: "enterprise",
     nome: "Plano Enterprise",
-    preco: null,
-    descricao: "Indisponível para contratação automática",
+    preco: 799,
+    descricao: "Corporativo, multiusuários e API",
     recorrencia: "mensal",
   },
 };

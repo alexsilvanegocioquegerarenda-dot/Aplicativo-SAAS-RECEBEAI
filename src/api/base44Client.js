@@ -259,6 +259,7 @@ async function readSupabase(tableName, query) {
 // Seed de dados iniciais realistas para demonstração e uso imediato
 export function getFreshInitialData() {
   const hoje = Date.now();
+  const currentYear = new Date(hoje).getFullYear();
   const formatYMD = (timestamp) => new Date(timestamp).toISOString().split("T")[0];
 
   return {
@@ -273,7 +274,7 @@ export function getFreshInitialData() {
         status: "atrasado",
         risco: "medio",
         limite_credito: 25000,
-        criado_em: "2024-01-10",
+        criado_em: `${currentYear}-01-10`,
       },
       {
         id: "cli-2",
@@ -285,7 +286,7 @@ export function getFreshInitialData() {
         status: "atrasado",
         risco: "alto",
         limite_credito: 15000,
-        criado_em: "2024-01-15",
+        criado_em: `${currentYear}-01-15`,
       },
       {
         id: "cli-3",
@@ -297,7 +298,7 @@ export function getFreshInitialData() {
         status: "em_dia",
         risco: "baixo",
         limite_credito: 60000,
-        criado_em: "2024-02-01",
+        criado_em: `${currentYear}-02-01`,
       },
       {
         id: "cli-4",
@@ -309,7 +310,7 @@ export function getFreshInitialData() {
         status: "a_vencer",
         risco: "medio",
         limite_credito: 12000,
-        criado_em: "2024-02-12",
+        criado_em: `${currentYear}-02-12`,
       },
       {
         id: "cli-5",
@@ -321,7 +322,7 @@ export function getFreshInitialData() {
         status: "em_dia",
         risco: "baixo",
         limite_credito: 40000,
-        criado_em: "2024-02-20",
+        criado_em: `${currentYear}-02-20`,
       },
     ],
 
@@ -329,7 +330,7 @@ export function getFreshInitialData() {
       {
         id: "rec-1",
         cliente_id: "cli-1",
-        nota_fiscal: "NF-2024-101",
+        nota_fiscal: `NF-${currentYear}-101`,
         descricao: "Serviços de Manutenção Mensal e Licenças",
         valor: 4500.0,
         valor_pago: 0,
@@ -341,7 +342,7 @@ export function getFreshInitialData() {
       {
         id: "rec-2",
         cliente_id: "cli-1",
-        nota_fiscal: "NF-2024-102",
+        nota_fiscal: `NF-${currentYear}-102`,
         descricao: "Consultoria em Nuvem - Etapa 2",
         valor: 3200.0,
         valor_pago: 0,
@@ -352,7 +353,7 @@ export function getFreshInitialData() {
       {
         id: "rec-3",
         cliente_id: "cli-2",
-        nota_fiscal: "NF-2024-089",
+        nota_fiscal: `NF-${currentYear}-089`,
         descricao: "Lote de Peças e Filtros Industriais",
         valor: 8900.0,
         valor_pago: 0,
@@ -363,7 +364,7 @@ export function getFreshInitialData() {
       {
         id: "rec-4",
         cliente_id: "cli-2",
-        nota_fiscal: "NF-2024-094",
+        nota_fiscal: `NF-${currentYear}-094`,
         descricao: "Frete Especial e Acessórios",
         valor: 1650.0,
         valor_pago: 0,
@@ -374,7 +375,7 @@ export function getFreshInitialData() {
       {
         id: "rec-5",
         cliente_id: "cli-3",
-        nota_fiscal: "NF-2024-110",
+        nota_fiscal: `NF-${currentYear}-110`,
         descricao: "Fornecimento de Insumos - Parcela 1/2",
         valor: 12500.0,
         valor_pago: 12500.0,
@@ -386,7 +387,7 @@ export function getFreshInitialData() {
       {
         id: "rec-6",
         cliente_id: "cli-3",
-        nota_fiscal: "NF-2024-111",
+        nota_fiscal: `NF-${currentYear}-111`,
         descricao: "Fornecimento de Insumos - Parcela 2/2",
         valor: 12500.0,
         valor_pago: 0,
@@ -397,7 +398,7 @@ export function getFreshInitialData() {
       {
         id: "rec-7",
         cliente_id: "cli-4",
-        nota_fiscal: "NF-2024-115",
+        nota_fiscal: `NF-${currentYear}-115`,
         descricao: "Serviço de Coquetel e Equipamentos",
         valor: 2800.0,
         valor_pago: 0,
@@ -408,7 +409,7 @@ export function getFreshInitialData() {
       {
         id: "rec-8",
         cliente_id: "cli-5",
-        nota_fiscal: "NF-2024-120",
+        nota_fiscal: `NF-${currentYear}-120`,
         descricao: "Honorários Mensais de Assessoria",
         valor: 5000.0,
         valor_pago: 0,
@@ -428,7 +429,7 @@ export function getFreshInitialData() {
         regua_step: 2,
         status: "entregue",
         data_envio: formatYMD(hoje - 3 * 86400000),
-        mensagem: "Olá Mariana, identificamos a pendência da NF-2024-101 no valor de R$ 4.500,00 vencida há 12 dias. Acesse o link ou use a chave PIX para quitar.",
+        mensagem: `Olá Mariana, identificamos a pendência da ${currentYear === 2026 ? 'NF-2026' : 'NF'}-${currentYear}-101 no valor de R$ 4.500,00 vencida há 12 dias. Acesse o link ou use a chave PIX para quitar.`,
       },
       {
         id: "cob-2",
@@ -439,7 +440,7 @@ export function getFreshInitialData() {
         regua_step: null,
         status: "visualizada",
         data_envio: formatYMD(hoje - 1 * 86400000),
-        mensagem: "Prezado Carlos, precisamos alinhar o pagamento referente ao título NF-2024-089 no valor de R$ 8.900,00. Estamos abertos a negociar um parcelamento.",
+        mensagem: `Prezado Carlos, precisamos alinhar o pagamento referente ao título NF-${currentYear}-089 no valor de R$ 8.900,00. Estamos abertos a negociar um parcelamento.`,
       },
     ],
 
@@ -514,7 +515,7 @@ export function getFreshInitialData() {
       {
         id: "imp-1",
         origem: "csv",
-        nome_arquivo: "faturas_janeiro_2024.csv",
+        nome_arquivo: `faturas_janeiro_${currentYear}.csv`,
         quantidade_registros: 45,
         valor_total: 184500.0,
         status: "concluida",

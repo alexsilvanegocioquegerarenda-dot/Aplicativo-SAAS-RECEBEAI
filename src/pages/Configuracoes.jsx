@@ -148,7 +148,6 @@ export default function Configuracoes() {
   };
 
   const abrirCheckout = (plano) => {
-    if (plano.id === "enterprise") return;
     setPlanoCheckout(plano);
     setAtivacaoSucesso(false);
     setModalCheckoutOpen(true);
@@ -495,21 +494,26 @@ export default function Configuracoes() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 mt-1">Ainda indisponível para contratação automática</p>
+              <p className="text-xs text-slate-500 mt-1">Para empresas que precisam de multiusuários e suporte premium</p>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-base font-semibold text-slate-500">Indisponível no momento</span>
+                <span className="text-2xl font-bold text-slate-900">R$ 799</span>
+                <span className="text-xs text-slate-400">,00/mês</span>
               </div>
               <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                <li className="flex items-center gap-2"><AlertTriangle className="h-3.5 w-3.5 text-purple-600" /> Escopo e condições ainda não definidos</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-purple-600" /> Recursos do plano Profissional</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-purple-600" /> Multiusuários e gestão corporativa</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-purple-600" /> Suporte prioritário e onboarding</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-purple-600" /> Integrações e automações avançadas</li>
               </ul>
             </div>
             <button
               type="button"
-              disabled
-              className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-200 py-2.5 text-xs font-bold text-slate-500 cursor-not-allowed"
+              onClick={() => abrirCheckout(MERCADO_PAGO_PLANS.enterprise)}
+              disabled={assinaturaExistente}
+              className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl bg-purple-600 py-2.5 text-xs font-bold text-white hover:bg-purple-700 shadow-sm shadow-purple-600/30 transition-all disabled:cursor-not-allowed disabled:opacity-50"
             >
               <CreditCard className="h-3.5 w-3.5" />
-              <span>Indisponível no momento</span>
+              <span>{assinaturaExistente ? "Assinatura existente" : "Abrir checkout"}</span>
             </button>
           </div>
         </div>

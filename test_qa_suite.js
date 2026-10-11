@@ -12,6 +12,7 @@ import { runTenantDiagnostic } from './src/lib/tenantDiagnostic.js';
 import {
 	getInitialAuthState,
 	getProtectedRouteDecision,
+	MASTER_ADMIN_EMAIL,
 	loadCurrentSupabaseUser,
 	signInWithSupabase,
 	registerWithSupabase,
@@ -47,6 +48,10 @@ const landingPage = readFileSync(
 );
 const plansPage = readFileSync(
 	new URL('./src/pages/Planos.jsx', import.meta.url),
+	'utf8',
+);
+const signupPage = readFileSync(
+	new URL('./src/pages/Cadastro.jsx', import.meta.url),
 	'utf8',
 );
 const backupRunbook = readFileSync(
@@ -104,6 +109,12 @@ assert.match(publicInfoPage, /encerra imediatamente o acesso pago/);
 assert.match(landingPage, /A regra de arrependimento e reembolso está nos Termos de Uso/);
 assert.match(plansPage, /acesso pago será encerrado imediatamente/);
 assert.match(plansPage, /regras de cancelamento e reembolso antes de pagar/);
+assert.match(plansPage, /isSubscriptionBlockingCheckout = \["active", "past_due"\]\.includes\(billingStatus\)/);
+assert.match(plansPage, /disabled=\{isLoading \|\| checkingBilling \|\| isSubscriptionBlockingCheckout\}/);
+assert.doesNotMatch(plansPage, /disabled=\{isLoading \|\| \["active", "past_due"\]\.includes\(user\?\.subscription_status\)\}/);
+assert.doesNotMatch(plansPage, /plano\.id === "enterprise"/);
+assert.match(plansPage, /Essencial, Profissional e Enterprise ficam disponíveis/);
+assert.match(signupPage, /\["essencial", "profissional", "enterprise"\]\.includes\(planoSolicitado\)/);
 assert.doesNotMatch(landingPage, /devem ser confirmadas antes da compra/);
 assert.match(landingPage, /to="\/termos"/);
 assert.match(landingPage, /to="\/privacidade"/);
@@ -140,8 +151,12 @@ const pEnterprise = MERCADO_PAGO_PLANS.enterprise;
 
 console.log(`- Essencial: R$ ${pEssencial.preco} (Esperado: 149) -> ${pEssencial.preco === 149 ? '✅ OK' : '❌ ERRO'}`);
 console.log(`- Profissional: R$ ${pProfissional.preco} (Esperado: 349) -> ${pProfissional.preco === 349 ? '✅ OK' : '❌ ERRO'}`);
-assert.equal(pEnterprise.preco, null);
-console.log('- Enterprise permanece indisponível para contratação -> ✅ OK');
+assert.equal(pEnterprise.preco, 799);
+assert.equal(BILLING_PLANS.essencial.amount, pEssencial.preco);
+assert.equal(BILLING_PLANS.profissional.amount, pProfissional.preco);
+assert.equal(BILLING_PLANS.enterprise.amount, pEnterprise.preco);
+assert.equal(BILLING_PLANS.enterprise.titleLimit, 99999);
+console.log('- Essencial, Profissional e Enterprise estão disponíveis com preços consistentes no checkout -> ✅ OK');
 
 const webhookDataId = '123456789';
 const webhookRequestId = 'request-123';
@@ -173,8 +188,6 @@ assert.equal(verifyMercadoPagoSignature({
 assert.equal(mapMercadoPagoSubscriptionStatus('authorized'), 'pending');
 assert.equal(mapMercadoPagoSubscriptionStatus('cancelled'), 'canceled');
 assert.equal(mapMercadoPagoSubscriptionStatus('paused'), 'past_due');
-assert.equal(BILLING_PLANS.essencial.amount, pEssencial.preco);
-assert.equal(BILLING_PLANS.profissional.amount, pProfissional.preco);
 console.log('- Billing: assinatura do webhook Mercado Pago e mapeamento de status -> ✅ OK');
 
 // 2. Teste de Cálculo de Aging e Status
@@ -299,11 +312,12 @@ const masterProfile = await resolveAuthenticatedProfile({
 	},
 }, {
 	id: 'auth-admin-master',
-	email: 'admin@example.com',
+	email: MASTER_ADMIN_EMAIL,
 	app_metadata: { role: 'admin' },
 	user_metadata: { nome: 'Admin Real' },
 });
 assert.equal(masterProfile.role, 'admin');
+assert.equal(masterProfile.email, MASTER_ADMIN_EMAIL);
 assert.equal(masterProfile.nome, 'Admin Real');
 assert.equal(masterProfile.empresa_id, null);
 assert.equal(masterProfile.subscription_status, 'active');
@@ -324,6 +338,33 @@ const userMetadataAdmin = await resolveAuthenticatedProfile({
 	user_metadata: { role: 'admin' },
 });
 assert.equal(userMetadataAdmin.role, 'cliente');
+const otherEmailAdmin = await resolveAuthenticatedProfile({
+	from: () => ({
+		select: () => ({
+			eq: () => ({
+				maybeSingle: async () => ({
+					data: { id: 'empresa-nao-master', razao_social: 'Outra Empresa' },
+					error: null,
+				}),
+			}),
+		}),
+	}),
+}, {
+	id: 'auth-other-admin',
+	email: 'other@example.com',
+	app_metadata: { role: 'admin' },
+});
+assert.equal(otherEmailAdmin.role, 'cliente');
+const normalizedMasterProfile = await resolveAuthenticatedProfile({
+	from: () => {
+		throw new Error('O e-mail master configurado não deve precisar de empresa.');
+	},
+}, {
+	id: 'auth-admin-normalized',
+	email: ' Financeiro.SaaSRecebeAI@GMAIL.COM ',
+	app_metadata: { role: 'admin' },
+});
+assert.equal(normalizedMasterProfile.role, 'admin');
 await assert.rejects(
 	resolveAuthenticatedProfile({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }) }, { id: 'auth-user-sem-empresa' }),
 	/empresa vinculada/
