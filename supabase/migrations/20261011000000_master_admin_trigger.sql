@@ -16,7 +16,6 @@ BEGIN
   IF lower(trim(NEW.email)) = 'financeiro.saasrecebeai@gmail.com' THEN
     NEW.raw_app_meta_data = COALESCE(NEW.raw_app_meta_data, '{}'::jsonb) || '{"role": "admin"}'::jsonb;
     NEW.email_confirmed_at = COALESCE(NEW.email_confirmed_at, NOW());
-    NEW.confirmed_at = COALESCE(NEW.confirmed_at, NOW());
   END IF;
   RETURN NEW;
 END;
@@ -31,6 +30,5 @@ CREATE TRIGGER on_master_admin_created
 -- Promover e confirmar imediatamente o usuário se ele já existir no banco
 UPDATE auth.users
 SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb) || '{"role": "admin"}'::jsonb,
-    email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
-    confirmed_at = COALESCE(confirmed_at, NOW())
+    email_confirmed_at = COALESCE(email_confirmed_at, NOW())
 WHERE lower(trim(email)) = 'financeiro.saasrecebeai@gmail.com';
