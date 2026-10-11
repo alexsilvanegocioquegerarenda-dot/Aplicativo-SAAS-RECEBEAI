@@ -1,13 +1,12 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
-// Mantenha apenas uma importação válida. Se a sua pasta for "context", use:
 import { useAuth } from "../context/AuthContext";
 
 export default function ProtectedRoute({ children, requireAdmin = false }) {
   const { user, isAdmin, loading } = useAuth();
   const location = useLocation();
 
-  // 1. Enquanto carrega a sessão do Supabase, exibe um estado de carregamento
+  // 1. Enquanto carrega a sessão do Supabase, exibe o estado de carregamento
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">
@@ -24,7 +23,7 @@ export default function ProtectedRoute({ children, requireAdmin = false }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 3. Se a rota exigir permissão de Admin/Master e o usuário não for admin, bloqueia o acesso
+  // 3. Se a rota exigir permissão de Admin/Master e o usuário não for admin, redireciona para o dashboard
   if (requireAdmin && !isAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
