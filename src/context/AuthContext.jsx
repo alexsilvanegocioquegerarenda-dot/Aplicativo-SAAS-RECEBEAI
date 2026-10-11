@@ -1,9 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { supabase, isSupabaseConfigured } from "@/api/supabaseClient";
 import { base44, clearDemoData, disableDemoMode } from "@/api/base44Client";
-import { getInitialAuthState, loadCurrentSupabaseUser, MASTER_ADMIN_EMAIL, registerWithSupabase, resolveAuthenticatedProfile, signInWithSupabase, signOutFromSupabase } from "@/lib/authFlows";
+import {
+  getInitialAuthState,
+  loadCurrentSupabaseUser,
+  MASTER_ADMIN_EMAIL,
+  registerWithSupabase,
+  resolveAuthenticatedProfile,
+  signInWithSupabase,
+  signOutFromSupabase
+} from "@/lib/authFlows";
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 const AUTH_STORAGE_KEY = "recebeai_auth_user";
 const INITIAL_AUTH_STATE = getInitialAuthState();
@@ -144,7 +152,7 @@ export function AuthProvider({ children }) {
       return result;
     }
 
-  authRequestRef.current += 1;
+    authRequestRef.current += 1;
     authModeRef.current = "supabase";
     clearDemoUserStorage();
     setUser(result.user);
@@ -199,7 +207,7 @@ export function AuthProvider({ children }) {
       return result;
     }
 
-  authRequestRef.current += 1;
+    authRequestRef.current += 1;
     authModeRef.current = "supabase";
     clearDemoUserStorage();
     setUser(result.user);
@@ -247,10 +255,11 @@ export function AuthProvider({ children }) {
     return result.user;
   };
 
+  // Libera o perfil Admin se o usuário tiver role "admin" ou se bater o email do MASTER_ADMIN_EMAIL
   const isAdmin = demoSession
     ? user?.id === DEFAULT_USERS.admin.id
-    : user?.role === "admin" &&
-      user?.email?.trim().toLowerCase() === MASTER_ADMIN_EMAIL;
+    : user?.role === "admin" || user?.email?.trim().toLowerCase() === MASTER_ADMIN_EMAIL?.trim().toLowerCase();
+
   const currentEmpresaId = user?.empresa_id || null;
 
   return (
