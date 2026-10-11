@@ -2,7 +2,7 @@ import React from "react";
 import { supabase, isSupabaseConfigured } from "@/api/supabaseClient";
 import { base44, clearDemoData, disableDemoMode } from "@/api/base44Client";
 
-// Email do Administrador Master
+// E-mail do Administrador Master
 export const MASTER_ADMIN_EMAIL = "financeiro.saasrecebeai@gmail.com";
 
 export const AuthContext = React.createContext(null);
@@ -21,14 +21,14 @@ function failure(error, fallbackMessage) {
   };
 }
 
-// Resolução de perfil isolada para não fazer requisições a tabelas inexistentes
+// Resolução de perfil autônoma sem requisições REST adicionais para a conta Master
 export async function resolveAuthenticatedProfile(supabaseClient, authUser) {
   if (!authUser?.id) throw new Error("Usuário Supabase inválido.");
 
   const emailUser = authUser.email?.trim().toLowerCase();
   const userRole = authUser.app_metadata?.role || authUser.user_metadata?.role;
 
-  // Se for o usuário Master ou tiver role admin, libera imediatamente sem requisição REST adicional
+  // Se for Master ou Admin, libera o acesso global sem consulta de tabelas
   if (
     emailUser === MASTER_ADMIN_EMAIL.toLowerCase() ||
     userRole === "admin" ||
@@ -47,7 +47,7 @@ export async function resolveAuthenticatedProfile(supabaseClient, authUser) {
     };
   }
 
-  // Fluxo padrão para empresas/clientes normais
+  // Fluxo normal para clientes empresas
   const { data: empresa, error } = await supabaseClient
     .from("empresas")
     .select("id, razao_social, cnpj, telefone, plano, subscription_status")
@@ -72,7 +72,7 @@ export async function resolveAuthenticatedProfile(supabaseClient, authUser) {
   };
 }
 
-// Contas de demonstração
+// Perfis padrão para demonstração local
 export const DEFAULT_USERS = {
   admin: {
     id: "user-admin-master",
@@ -145,10 +145,10 @@ export function AuthProvider({ children }) {
         setUser(profile);
         setDemoSession(false);
         authModeRef.current = "supabase";
-        setAuthError(""); // Limpa erros de autenticação para o master
+        setAuthError(""); // Garante que nenhum erro fique visível no cabeçalho
       } catch (err) {
         if (active && requestId === authRequestRef.current) {
-          // Se for o email master, tolera erros de tabelas auxiliares e garante o login
+          // Fallback seguro: Se for a conta Master, concede o acesso mesmo se requisições auxiliares falharem
           const { data: userData } = await supabase.auth.getUser();
           if (userData?.user?.email?.trim().toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase()) {
             const profile = await resolveProfile(userData.user);
@@ -211,7 +211,7 @@ export function AuthProvider({ children }) {
     try { clearDemoData(); } catch {}
 
     if (!isSupabaseConfigured) {
-      const result = { success: false, message: "Supabase não está configurado. O login real está indisponível." };
+      const result = { success: false, message: "Supabase não está configurado." };
       setAuthError(result.message);
       setLoadingAuth(false);
       return result;
@@ -289,7 +289,7 @@ export function AuthProvider({ children }) {
         options: { data: { nome, empresa: razaoSocial, plano } },
       });
 
-      if (authError || !authData?.user) throw authError || new Error("Erro no cadastro Auth.");
+      if (authError || !authData?.user) throw authError || new Error("Erro no cadastro.");
 
       if (!authData.session) {
         setLoadingAuth(false);
