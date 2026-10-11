@@ -39,6 +39,7 @@ export default function Cadastro() {
 
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
+  const [contaExistente, setContaExistente] = useState(false);
   const [carregando, setCarregando] = useState(false);
 
   const planosOpcoes = [
@@ -109,6 +110,9 @@ export default function Cadastro() {
         } else {
           navigate("/dashboard");
         }
+      } else if (res.alreadyRegistered) {
+        setContaExistente(true);
+        setAviso(res.message);
       } else if (res.pendingConfirmation) {
         setAviso(res.message);
       } else {
@@ -159,13 +163,36 @@ export default function Cadastro() {
 
         {/* Card do Formulário */}
         <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 sm:p-10 backdrop-blur-xl shadow-2xl shadow-black/50">
+          {contaExistente && (
+            <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-200 flex flex-col gap-3">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-white">Esta conta já está registrada no sistema.</p>
+                  <p className="mt-1 text-slate-300">
+                    O e-mail informado já possui cadastro ativo. Para acessar seu painel, faça login ou recupere sua senha.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-amber-500/20">
+                <Link
+                  to="/login"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs transition-colors shadow-sm"
+                >
+                  <span>Ir para Tela de Login</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+          )}
+
           {erro && (
             <div className="mb-6 flex items-center gap-2.5 rounded-2xl bg-red-500/10 p-4 border border-red-500/20 text-xs text-red-300">
               <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
               <span>{erro}</span>
             </div>
           )}
-          {aviso && (
+          {aviso && !contaExistente && (
             <div role="status" className="mb-6 rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4 text-xs text-blue-200">
               {aviso}
             </div>

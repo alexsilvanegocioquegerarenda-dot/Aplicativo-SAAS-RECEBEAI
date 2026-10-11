@@ -93,6 +93,16 @@ export async function registerWithSupabase(supabase, formData) {
     if (!authData?.user) {
       return failure(new Error("O Supabase não retornou o usuário criado."), "Cadastro não confirmado pelo Supabase.");
     }
+
+    const isAlreadyRegistered = Array.isArray(authData.user.identities) && authData.user.identities.length === 0;
+    if (isAlreadyRegistered) {
+      return {
+        success: false,
+        alreadyRegistered: true,
+        message: "O e-mail " + email + " já possui cadastro ativo no sistema. Faça login diretamente ou utilize a recuperação de senha.",
+      };
+    }
+
     if (!authData.session) {
       return {
         success: false,

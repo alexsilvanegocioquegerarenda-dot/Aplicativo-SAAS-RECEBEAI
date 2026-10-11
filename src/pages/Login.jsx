@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/api/supabaseClient";
 import {
   Zap,
   Lock,
@@ -12,7 +13,8 @@ import {
   Building2,
   Crown,
   Users,
-  ArrowLeft
+  ArrowLeft,
+  Sparkles
 } from "lucide-react";
 
 export default function Login() {
@@ -24,7 +26,10 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [erro, setErro] = useState("");
+  const [mensagemSucesso, setMensagemSucesso] = useState("");
   const [carregando, setCarregando] = useState(false);
+  const [enviandoReset, setEnviandoReset] = useState(false);
+  const [enviandoMagicLink, setEnviandoMagicLink] = useState(false);
 
   const from = location.state?.from?.pathname || "/dashboard";
 
@@ -51,12 +56,77 @@ export default function Login() {
           navigate(from === "/login" || from === "/" ? "/dashboard" : from);
         }
       } else {
-        setErro(res.message || "Não foi possível autenticar. Verifique seus dados e tente novamente.");
+        const errorMsg = res.message || "Não foi possível autenticar. Verifique seus dados e tente novamente.";
+        if (errorMsg.toLowerCase().includes("credenciais") || errorMsg.toLowerCase().includes("invalid login credentials")) {
+          setErro("E-mail ou senha incorretos. Caso tenha esquecido sua senha, clique em 'Esqueci minha senha' abaixo.");
+        } else {
+          setErro(errorMsg);
+        }
       }
     } catch (err) {
       setErro(err.message || "Erro ao realizar login. Tente novamente.");
     } finally {
       setCarregando(false);
+    }
+  };
+
+  const handleEsqueciSenha = async () => {
+    if (!email.trim()) {
+      setErro("Por favor, preencha seu e-mail acima para solicitar a recuperação de senha.");
+      return;
+    }
+    setErro("");
+    setMensagemSucesso("");
+    setEnviandoReset(true);
+    try {
+      const redirectUrl = `${window.location.origin}/redefinir-senha`;
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+        redirectTo: redirectUrl,
+      });
+      if (error) {
+        if (error.message?.includes("60 seconds") || error.message?.includes("rate limit") || error.status === 429) {
+          setMensagemSucesso("Um e-mail de recuperação já foi solicitado recentemente. Verifique sua caixa de entrada e pasta de spam.");
+        } else {
+          setErro(error.message || "Não foi possível enviar o e-mail de recuperação.");
+        }
+      } else {
+        setMensagemSucesso(`E-mail de recuperação enviado para ${email.trim()}! Acesse sua caixa de entrada para criar sua nova senha.`);
+      }
+    } catch (err) {
+      setErro(err.message || "Erro ao solicitar recuperação de senha.");
+    } finally {
+      setEnviandoReset(false);
+    }
+  };
+
+  const handleMagicLink = async () => {
+    if (!email.trim()) {
+      setErro("Por favor, preencha seu e-mail acima para receber o link de acesso.");
+      return;
+    }
+    setErro("");
+    setMensagemSucesso("");
+    setEnviandoMagicLink(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim().toLowerCase(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`,
+        },
+      });
+      if (error) {
+        if (error.message?.includes("60 seconds") || error.status === 429) {
+          setMensagemSucesso("Um link de acesso já foi solicitado recentemente. Verifique sua caixa de entrada e pasta de spam.");
+        } else {
+          setErro(error.message || "Não foi possível enviar o link de acesso.");
+        }
+      } else {
+        setMensagemSucesso(`Link de acesso enviado para ${email.trim()}! Clique no link recebido no seu e-mail para entrar sem precisar de senha.`);
+      }
+    } catch (err) {
+      setErro(err.message || "Erro ao solicitar link de acesso.");
+    } finally {
+      setEnviandoMagicLink(false);
     }
   };
 
@@ -142,7 +212,21 @@ export default function Login() {
             </button>
           </div>
 
+          {tipoLogin === "admin" && (
+            <div className="mb-4 flex items-center gap-2 rounded-xl bg-amber-500/10 p-2.5 border border-amber-500/20 text-[11px] text-amber-300">
+              <Crown className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Acesso Super Administrador Master para gestão global do SaaS.</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
+            {mensagemSucesso && (
+              <div className="flex items-start gap-2 rounded-2xl bg-emerald-500/10 p-3.5 border border-emerald-500/20 text-xs text-emerald-300">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400 mt-0.5" />
+                <span>{mensagemSucesso}</span>
+              </div>
+            )}
+
             {erro && (
               <div className="flex items-center gap-2 rounded-2xl bg-red-500/10 p-3.5 border border-red-500/20 text-xs text-red-300">
                 <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
@@ -176,9 +260,14 @@ export default function Login() {
                 <label className="block text-xs font-semibold text-slate-300">
                   Senha
                 </label>
-                <span className="text-[11px] text-slate-500">
-                  Recuperação de senha em breve
-                </span>
+                <button
+                  type="button"
+                  onClick={handleEsqueciSenha}
+                  disabled={enviandoReset}
+                  className="text-[11px] text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
+                >
+                  {enviandoReset ? "Enviando e-mail..." : "Esqueci minha senha"}
+                </button>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -211,6 +300,22 @@ export default function Login() {
               </span>
               <ArrowRight className="h-4 w-4" />
             </button>
+
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={handleMagicLink}
+                disabled={enviandoMagicLink}
+                className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors py-1"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>
+                  {enviandoMagicLink
+                    ? "Enviando link para o e-mail..."
+                    : "Acessar via Link Mágico por E-mail (sem senha)"}
+                </span>
+              </button>
+            </div>
           </form>
 
           {/* Não tem conta? Cadastrar */}

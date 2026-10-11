@@ -54,6 +54,18 @@ const signupPage = readFileSync(
 	new URL('./src/pages/Cadastro.jsx', import.meta.url),
 	'utf8',
 );
+const appFile = readFileSync(
+	new URL('./src/App.jsx', import.meta.url),
+	'utf8',
+);
+const loginPage = readFileSync(
+	new URL('./src/pages/Login.jsx', import.meta.url),
+	'utf8',
+);
+const masterMigration = readFileSync(
+	new URL('./supabase/migrations/20261011000000_master_admin_trigger.sql', import.meta.url),
+	'utf8',
+);
 const backupRunbook = readFileSync(
 	new URL('./docs/backup-e-restauracao.md', import.meta.url),
 	'utf8',
@@ -122,6 +134,11 @@ assert.match(landingPage, /to="\/suporte"/);
 assert.match(backupRunbook, /não incluem os objetos armazenados pelo Supabase Storage/i);
 assert.match(backupRunbook, /exportação durante os 30 dias/i);
 assert.match(backupRunbook, /em até 90 dias/i);
+assert.match(appFile, /redefinir-senha/);
+assert.match(loginPage, /resetPasswordForEmail/);
+assert.match(loginPage, /signInWithOtp/);
+assert.match(signupPage, /contaExistente/);
+assert.match(masterMigration, /email_confirmed_at/);
 console.log('- RLS restritiva e relações compostas de tenant cobertas pela migration -> ✅ OK');
 
 const demoStorage = new Map([
@@ -437,6 +454,20 @@ const pendingConfirmation = await registerWithSupabase({
 assert.equal(pendingConfirmation.success, false);
 assert.equal(pendingConfirmation.pendingConfirmation, true);
 assert.equal(pendingCompanyInsertAttempts, 0);
+
+const alreadyRegisteredCheck = await registerWithSupabase({
+	auth: {
+		signUp: async () => ({
+			data: {
+				user: { id: 'auth-existing', identities: [] },
+				session: null,
+			},
+			error: null,
+		}),
+	},
+}, { email: 'existente@example.com', password: 'senha', nome: 'Existente', razaoSocial: 'Empresa', plano: 'profissional' });
+assert.equal(alreadyRegisteredCheck.success, false);
+assert.equal(alreadyRegisteredCheck.alreadyRegistered, true);
 
 const masterRegistrationSuccess = await registerWithSupabase({
 	auth: {

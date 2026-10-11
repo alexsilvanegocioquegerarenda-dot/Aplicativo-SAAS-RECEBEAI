@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Cadastro from './pages/Cadastro';
+import RedefinirSenha from './pages/RedefinirSenha';
 import Dashboard from './pages/Dashboard';
 import Clientes from './pages/Clientes';
 import ClienteDetalhes from './pages/ClienteDetalhes';
@@ -40,6 +41,7 @@ export default function App() {
           {/* 2. Rotas públicas de Autenticação Multi-empresa */}
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
+          <Route path="/redefinir-senha" element={<RedefinirSenha />} />
 
           {/* 3. Rotas autenticadas da Plataforma SaaS envolvidas pelo Layout */}
           <Route
