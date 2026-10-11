@@ -1,3 +1,7 @@
+param(
+  [string]$MasterPassword
+)
+
 $ErrorActionPreference = "Stop"
 
 $envFile = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
@@ -22,7 +26,11 @@ try {
   $env:SUPABASE_URL = $supabaseUrl
   $env:SUPABASE_SERVICE_ROLE_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($keyPointer)
   $scriptPath = Join-Path $PSScriptRoot "set-master-admin.mjs"
-  node $scriptPath
+  if ($MasterPassword) {
+    node $scriptPath $MasterPassword
+  } else {
+    node $scriptPath
+  }
   if ($LASTEXITCODE -ne 0) {
     throw "A atualização do papel Master falhou. Veja a mensagem acima."
   }

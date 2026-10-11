@@ -30,33 +30,53 @@ async function findMasterUser() {
     if (data.users.length < 1000) break;
   }
 
-  if (matches.length !== 1) {
+  if (matches.length === 0) {
+    const initialPassword = process.env.MASTER_PASSWORD || process.argv[2];
+    if (initialPassword) {
+      console.log(`Criando usuário Master ${MASTER_ADMIN_EMAIL}...`);
+      const { data: created, error: createError } = await supabase.auth.admin.createUser({
+        email: MASTER_ADMIN_EMAIL,
+        password: initialPassword,
+        email_confirm: true,
+        app_metadata: { role: "admin" },
+        user_metadata: { nome: "Administrador Master" },
+      });
+      if (createError) throw new Error(`Não foi possível criar a conta Master: ${createError.message}`);
+      return created.user;
+    }
     throw new Error(
-      matches.length === 0
-        ? `Não foi encontrado usuário para ${MASTER_ADMIN_EMAIL}. Nenhuma alteração foi feita.`
-        : `Foram encontradas ${matches.length} contas para ${MASTER_ADMIN_EMAIL}. Nenhuma alteração foi feita.`
+      `Não foi encontrado usuário para ${MASTER_ADMIN_EMAIL}. Nenhuma alteração foi feita. Para criar a conta automaticamente, passe a senha desejada como argumento: node scripts/set-master-admin.mjs [senha]`
     );
+  }
+
+  if (matches.length > 1) {
+    throw new Error(`Foram encontradas ${matches.length} contas para ${MASTER_ADMIN_EMAIL}. Nenhuma alteração foi feita.`);
   }
 
   return matches[0];
 }
 
 const user = await findMasterUser();
+
+const updates = {
+  app_metadata: {
+    ...user.app_metadata,
+    role: "admin",
+  },
+};
+
 if (!user.email_confirmed_at) {
-  throw new Error(
-    `A conta ${MASTER_ADMIN_EMAIL} ainda não está confirmada. Confirme o e-mail e execute novamente.`
-  );
+  console.log(`Confirmando e-mail da conta ${MASTER_ADMIN_EMAIL}...`);
+  updates.email_confirm = true;
 }
 
-if (user.app_metadata?.role !== "admin") {
-  const { error } = await supabase.auth.admin.updateUserById(user.id, {
-    app_metadata: {
-      ...user.app_metadata,
-      role: "admin",
-    },
-  });
-  if (error) throw new Error(`Não foi possível atribuir o papel Master: ${error.message}`);
+const optionalPassword = process.env.MASTER_PASSWORD || process.argv[2];
+if (optionalPassword) {
+  updates.password = optionalPassword;
 }
+
+const { error } = await supabase.auth.admin.updateUserById(user.id, updates);
+if (error) throw new Error(`Não foi possível atualizar o usuário Master: ${error.message}`);
 
 const { data: verified, error: verifyError } =
   await supabase.auth.admin.getUserById(user.id);

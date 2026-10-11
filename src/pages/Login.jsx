@@ -126,7 +126,7 @@ export default function Login() {
               type="button"
               onClick={() => {
                 setTipoLogin("admin");
-                setEmail("admin@recebeai.com.br");
+                setEmail("financeiro.saasrecebeai@gmail.com");
                 setPassword("");
                 setErro("");
                 clearAuthError();
@@ -162,7 +162,7 @@ export default function Login() {
                   placeholder={
                     tipoLogin === "empresa"
                       ? "financeiro@suaempresa.com.br"
-                      : "admin@recebeai.com.br"
+                      : "financeiro.saasrecebeai@gmail.com"
                   }
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}

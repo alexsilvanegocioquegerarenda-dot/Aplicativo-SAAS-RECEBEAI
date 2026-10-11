@@ -1,22 +1,229 @@
+export const MASTER_ADMIN_EMAIL = "financeiro.saasrecebeai@gmail.com";
+
+function failure(error, fallbackMessage) {
+  return {
+    success: false,
+    error,
+    message: error?.message || fallbackMessage,
+  };
+}
+
+export function getInitialAuthState() {
+  return { user: null, loadingAuth: true };
+}
+
+export function getProtectedRouteDecision({
+  loadingAuth,
+  user,
+  requireAdmin = false,
+  isAdmin = false,
+  subscriptionStatus = "active",
+  pathname = "",
+}) {
+  if (loadingAuth) return "loading";
+  if (!user) return "login";
+  if (requireAdmin && !isAdmin) return "forbidden";
+  if (
+    subscriptionStatus !== "active" &&
+    pathname !== "/planos" &&
+    pathname !== "/configuracoes" &&
+    pathname !== "/admin/pagamentos"
+  ) return "billing";
+  return "allow";
+}
+
+export async function loadCurrentSupabaseUser(auth, resolveProfile) {
+  try {
+    const { data: sessionData, error: sessionError } = await auth.getSession();
+    if (sessionError) return failure(sessionError, "Não foi possível validar a sessão.");
+    if (!sessionData?.session) return { success: true, user: null };
+
+    const { data: userData, error: userError } = await auth.getUser();
+    if (userError || !userData?.user) {
+      return failure(userError || new Error("A sessão Supabase não possui um usuário válido."), "Sessão inválida.");
+    }
+
+    const user = await resolveProfile(userData.user);
+    if (!user) return failure(new Error("Conta sem empresa vinculada no Supabase."), "Conta sem empresa vinculada.");
+    return { success: true, user };
+  } catch (error) {
+    return failure(error, "Não foi possível validar a sessão.");
+  }
+}
+
+export async function signInWithSupabase(auth, email, password, resolveProfile) {
+  try {
+    const { data, error } = await auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+    if (error) return failure(error, "Não foi possível autenticar no Supabase.");
+    if (!data?.session) {
+      return failure(new Error("O Supabase não criou uma sessão autenticada."), "Sessão Supabase ausente.");
+    }
+
+    const { data: verifiedData, error: verifiedError } = await auth.getUser();
+    if (verifiedError || !verifiedData?.user) {
+      return failure(verifiedError || new Error("O Supabase não confirmou o usuário."), "Não foi possível validar o usuário.");
+    }
+
+    const user = await resolveProfile(verifiedData.user);
+    if (!user) return failure(new Error("Conta sem empresa vinculada no Supabase."), "Conta sem empresa vinculada.");
+    return { success: true, user };
+  } catch (error) {
+    return failure(error, "Não foi possível autenticar no Supabase.");
+  }
+}
+
+export async function registerWithSupabase(supabase, formData) {
+  const email = formData.email.trim().toLowerCase();
+  const isMaster = email === MASTER_ADMIN_EMAIL.toLowerCase();
+  try {
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password: formData.password,
+      options: {
+        data: {
+          nome: formData.nome || (isMaster ? "Administrador Master" : ""),
+          empresa: formData.razaoSocial || (isMaster ? "RecebeAi Tecnologia" : ""),
+          plano: isMaster ? "enterprise" : (formData.plano || "profissional"),
+          role: isMaster ? "admin" : "cliente",
+        },
+      },
+    });
+
+    if (authError) return failure(authError, "Não foi possível criar a conta no Supabase Auth.");
+    if (!authData?.user) {
+      return failure(new Error("O Supabase não retornou o usuário criado."), "Cadastro não confirmado pelo Supabase.");
+    }
+    if (!authData.session) {
+      return {
+        success: false,
+        pendingConfirmation: true,
+        message: "Confirme seu e-mail para concluir o cadastro. Um link de confirmação foi enviado para " + email + ".",
+      };
+    }
+
+    let empresa = null;
+    if (isMaster) {
+      try {
+        const { data: empresaData } = await supabase
+          .from("empresas")
+          .insert({
+            user_id: authData.user.id,
+            razao_social: formData.razaoSocial || "RecebeAi Tecnologia",
+            cnpj: formData.cnpj || "",
+            telefone: formData.telefone || "",
+            email,
+            plano: "enterprise",
+            limite_titulos: 99999,
+          })
+          .select("id, razao_social, cnpj, telefone, plano, subscription_status")
+          .single();
+        empresa = empresaData;
+      } catch (e) {
+        // Para a conta Master, uma linha em empresas é opcional
+      }
+    } else {
+      const { data: empresaData, error: empresaError } = await supabase
+        .from("empresas")
+        .insert({
+          user_id: authData.user.id,
+          razao_social: formData.razaoSocial,
+          cnpj: formData.cnpj || "",
+          telefone: formData.telefone || "",
+          email,
+          plano: formData.plano,
+          limite_titulos: formData.plano === "enterprise" ? 99999 : formData.plano === "profissional" ? 2000 : 300,
+        })
+        .select("id, razao_social, cnpj, telefone, plano, subscription_status")
+        .single();
+
+      if (empresaError || !empresaData?.id) {
+        try {
+          await supabase.auth.signOut({ scope: "local" });
+        } catch (e) {}
+        return failure(empresaError || new Error("O Supabase não confirmou a empresa criada."), "Não foi possível criar a empresa.");
+      }
+      empresa = empresaData;
+    }
+
+    const { data: verifiedData, error: verifiedError } = await supabase.auth.getUser();
+    if (verifiedError || !verifiedData?.user) {
+      try {
+        await supabase.auth.signOut({ scope: "local" });
+      } catch (e) {}
+      return failure(verifiedError || new Error("A sessão após cadastro não foi validada."), "Não foi possível validar a sessão criada.");
+    }
+
+    if (isMaster) {
+      return {
+        success: true,
+        user: {
+          id: verifiedData.user.id,
+          email: verifiedData.user.email,
+          nome: formData.nome || "Administrador Master",
+          role: "admin",
+          cargo: "Super Administrador Master",
+          empresa_id: empresa?.id || null,
+          empresa_nome: "RecebeAi Tecnologia",
+          cnpj: empresa?.cnpj || "",
+          telefone: empresa?.telefone || "",
+          plano: "enterprise",
+          subscription_status: "active",
+        },
+      };
+    }
+
+    return {
+      success: true,
+      user: {
+        id: verifiedData.user.id,
+        email: verifiedData.user.email,
+        nome: formData.nome,
+        role: "cliente",
+        cargo: "Diretor(a) / Gestor(a)",
+        empresa_id: empresa.id,
+        empresa_nome: empresa.razao_social,
+        cnpj: empresa.cnpj || "",
+        telefone: empresa.telefone || "",
+        plano: empresa.plano || formData.plano,
+        subscription_status: empresa.subscription_status || "pending",
+      },
+    };
+  } catch (error) {
+    try {
+      await supabase.auth.signOut({ scope: "local" });
+    } catch (e) {}
+    return failure(error, "Não foi possível concluir o cadastro no Supabase.");
+  }
+}
+
+export async function signOutFromSupabase(auth, clearLocalState) {
+  let error = null;
+  try {
+    const result = await auth.signOut();
+    if (result?.error) error = result.error;
+  } catch (signOutError) {
+    error = signOutError;
+  } finally {
+    clearLocalState();
+  }
+  return error ? failure(error, "Não foi possível encerrar a sessão Supabase.") : { success: true };
+}
+
 export async function resolveAuthenticatedProfile(supabase, authUser) {
   if (!authUser?.id) throw new Error("Usuário Supabase inválido.");
 
-  const emailUser = authUser.email?.trim().toLowerCase();
-  const userRole = authUser.app_metadata?.role || authUser.user_metadata?.role;
+  const normalizedEmail = authUser.email?.trim().toLowerCase();
+  const isMaster = normalizedEmail === MASTER_ADMIN_EMAIL.toLowerCase();
 
   // 1. SE FOR MASTER / ADMIN: Retorna imediatamente sem consultar a tabela "empresas"
-  if (
-    emailUser === MASTER_ADMIN_EMAIL ||
-    userRole === "admin" ||
-    userRole === "master"
-  ) {
+  if (isMaster) {
     return {
       id: authUser.id,
       email: authUser.email,
       nome: authUser.user_metadata?.nome || "Administrador Master",
       role: "admin",
       cargo: "Super Administrador Master",
-      empresa_id: "emp-master-recebeai",
+      empresa_id: null,
       empresa_nome: "RecebeAi Tecnologia",
       plano: "enterprise",
       subscription_status: "active",

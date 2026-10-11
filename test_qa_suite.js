@@ -365,6 +365,19 @@ const normalizedMasterProfile = await resolveAuthenticatedProfile({
 	app_metadata: { role: 'admin' },
 });
 assert.equal(normalizedMasterProfile.role, 'admin');
+
+const directMasterProfileWithoutAppMeta = await resolveAuthenticatedProfile({
+	from: () => {
+		throw new Error('O e-mail master configurado não deve precisar de empresa.');
+	},
+}, {
+	id: 'auth-admin-sem-meta',
+	email: MASTER_ADMIN_EMAIL,
+});
+assert.equal(directMasterProfileWithoutAppMeta.role, 'admin');
+assert.equal(directMasterProfileWithoutAppMeta.cargo, 'Super Administrador Master');
+assert.equal(directMasterProfileWithoutAppMeta.empresa_id, null);
+
 await assert.rejects(
 	resolveAuthenticatedProfile({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }) }, { id: 'auth-user-sem-empresa' }),
 	/empresa vinculada/
@@ -424,6 +437,22 @@ const pendingConfirmation = await registerWithSupabase({
 assert.equal(pendingConfirmation.success, false);
 assert.equal(pendingConfirmation.pendingConfirmation, true);
 assert.equal(pendingCompanyInsertAttempts, 0);
+
+const masterRegistrationSuccess = await registerWithSupabase({
+	auth: {
+		signUp: async () => ({ data: { user: { id: 'auth-master-id' }, session: { access_token: 'valid' } }, error: null }),
+		getUser: async () => ({ data: { user: { id: 'auth-master-id', email: MASTER_ADMIN_EMAIL } }, error: null }),
+	},
+	from: () => ({
+		insert: () => ({
+			select: () => ({ single: async () => ({ data: { id: 'empresa-master' }, error: null }) }),
+		}),
+	}),
+}, { email: MASTER_ADMIN_EMAIL, password: 'senha123', nome: 'Alexandre Silva', razaoSocial: 'RecebeAi Tecnologia', plano: 'enterprise' });
+assert.equal(masterRegistrationSuccess.success, true);
+assert.equal(masterRegistrationSuccess.user.role, 'admin');
+assert.equal(masterRegistrationSuccess.user.email, MASTER_ADMIN_EMAIL);
+assert.equal(masterRegistrationSuccess.user.empresa_nome, 'RecebeAi Tecnologia');
 
 let signedOut = false;
 let clearedUser = false;

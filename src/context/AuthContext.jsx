@@ -1,9 +1,16 @@
 import React from "react";
 import { supabase, isSupabaseConfigured } from "@/api/supabaseClient";
 import { base44, clearDemoData, disableDemoMode } from "@/api/base44Client";
+import {
+  MASTER_ADMIN_EMAIL,
+  resolveAuthenticatedProfile,
+  signInWithSupabase,
+  registerWithSupabase,
+  signOutFromSupabase,
+  loadCurrentSupabaseUser
+} from "@/lib/authFlows";
 
-// E-mail do Administrador Master
-export const MASTER_ADMIN_EMAIL = "financeiro.saasrecebeai@gmail.com";
+export { MASTER_ADMIN_EMAIL, resolveAuthenticatedProfile };
 
 export const AuthContext = React.createContext(null);
 
@@ -21,63 +28,12 @@ function failure(error, fallbackMessage) {
   };
 }
 
-// Resolução do perfil isolada sem requisições adicionais para o Super Admin
-export async function resolveAuthenticatedProfile(supabaseClient, authUser) {
-  if (!authUser?.id) throw new Error("Usuário Supabase inválido.");
-
-  const emailUser = authUser.email?.trim().toLowerCase();
-  const userRole = authUser.app_metadata?.role || authUser.user_metadata?.role;
-
-  // Se for o usuário Master, retorna o perfil de admin sem consultar tabelas auxiliares
-  if (
-    emailUser === MASTER_ADMIN_EMAIL.toLowerCase() ||
-    userRole === "admin" ||
-    userRole === "master"
-  ) {
-    return {
-      id: authUser.id,
-      email: authUser.email,
-      nome: authUser.user_metadata?.nome || "Administrador Master",
-      role: "admin",
-      cargo: "Super Administrador Master",
-      empresa_id: "emp-master-recebeai",
-      empresa_nome: "RecebeAi Tecnologia",
-      plano: "enterprise",
-      subscription_status: "active",
-    };
-  }
-
-  // Fluxo para clientes
-  const { data: empresa, error } = await supabaseClient
-    .from("empresas")
-    .select("id, razao_social, cnpj, telefone, plano, subscription_status")
-    .eq("user_id", authUser.id)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!empresa?.id) throw new Error("Esta conta não possui uma empresa vinculada no Supabase.");
-
-  return {
-    id: authUser.id,
-    email: authUser.email,
-    nome: authUser.user_metadata?.nome || empresa.razao_social,
-    role: "cliente",
-    cargo: "Gestor(a) Financeiro",
-    empresa_id: empresa.id,
-    empresa_nome: empresa.razao_social,
-    cnpj: empresa.cnpj || "",
-    telefone: empresa.telefone || "",
-    plano: empresa.plano || "profissional",
-    subscription_status: empresa.subscription_status || "active",
-  };
-}
-
 export const DEFAULT_USERS = {
   admin: {
     id: "user-admin-master",
     nome: "Alexandre Silva",
-    email: "admin@recebeai.com.br",
-    role: "admin",
+    email: "financeiro.saasrecebeai@gmail.com",
+    role: "admin", // Permissão total e acesso ao painel Master
     cargo: "Super Administrador Master",
     empresa_id: "emp-master-recebeai",
     empresa_nome: "RecebeAi Tecnologia",
@@ -119,48 +75,32 @@ export function AuthProvider({ children }) {
     const syncCurrentSession = async () => {
       const requestId = ++authRequestRef.current;
       try {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError || !sessionData?.session) {
-          if (active && requestId === authRequestRef.current) {
-            setUser(null);
-            setLoadingAuth(false);
-          }
-          return;
-        }
+        const result = await loadCurrentSupabaseUser(supabase.auth, resolveProfile);
+        if (!active || requestId !== authRequestRef.current || authModeRef.current === "demo" || authModeRef.current === "logged_out") return;
 
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError || !userData?.user) {
-          if (active && requestId === authRequestRef.current) {
-            setUser(null);
-            setLoadingAuth(false);
-          }
-          return;
-        }
-
-        const profile = await resolveProfile(userData.user);
-        if (!active || requestId !== authRequestRef.current) return;
-
-        disableDemoMode();
-        setUser(profile);
-        setDemoSession(false);
-        authModeRef.current = "supabase";
-        
-        // Se for admin, garante a limpeza do erro
-        if (profile?.role === "admin" || profile?.email?.trim().toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase()) {
+        if (result.success) {
+          setUser(result.user);
+          setDemoSession(false);
+          authModeRef.current = result.user ? "supabase" : "anonymous";
           setAuthError("");
-        }
-      } catch (err) {
-        if (active && requestId === authRequestRef.current) {
+        } else {
+          // Se for o master logado, limpa erro
           const { data: userData } = await supabase.auth.getUser();
           if (userData?.user?.email?.trim().toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase()) {
             const profile = await resolveProfile(userData.user);
             setUser(profile);
             setDemoSession(false);
-            setAuthError(""); // Anula qualquer erro para o admin
+            setAuthError("");
           } else {
             setUser(null);
-            setAuthError(err?.message || "Erro ao carregar perfil.");
+            authModeRef.current = "anonymous";
+            setAuthError(result.message);
           }
+        }
+      } catch (err) {
+        if (active && requestId === authRequestRef.current) {
+          setUser(null);
+          setAuthError(err?.message || "Erro ao carregar perfil.");
         }
       } finally {
         if (active && requestId === authRequestRef.current) {
@@ -219,41 +159,25 @@ export function AuthProvider({ children }) {
       return result;
     }
 
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password,
-      });
-
-      if (error || !data?.session) {
-        throw error || new Error("Não foi possível autenticar no Supabase.");
-      }
-
-      const { data: verifiedData, error: verifiedError } = await supabase.auth.getUser();
-      if (verifiedError || !verifiedData?.user) {
-        throw verifiedError || new Error("Não foi possível validar o usuário.");
-      }
-
-      const authenticatedProfile = await resolveProfile(verifiedData.user);
-
-      authRequestRef.current += 1;
-      authModeRef.current = "supabase";
-      clearDemoUserStorage();
-      setUser(authenticatedProfile);
-      setDemoSession(false);
-      setAuthError(""); // Garante authError limpo no login do Admin
-      setLoadingAuth(false);
-      return { success: true, user: authenticatedProfile };
-    } catch (err) {
+    const result = await signInWithSupabase(supabase.auth, email, password, resolveProfile);
+    if (!result.success) {
       try { await supabase.auth.signOut({ scope: "local" }); } catch {}
       authRequestRef.current += 1;
       setUser(null);
-      const msg = err?.message || "Erro de autenticação.";
-      setAuthError(msg);
+      setAuthError(result.message);
       setLoadingAuth(false);
       authModeRef.current = "anonymous";
-      return failure(err, msg);
+      return result;
     }
+
+    authRequestRef.current += 1;
+    authModeRef.current = "supabase";
+    clearDemoUserStorage();
+    setUser(result.user);
+    setDemoSession(false);
+    setAuthError("");
+    setLoadingAuth(false);
+    return result;
   };
 
   const register = async ({
@@ -283,73 +207,33 @@ export function AuthProvider({ children }) {
       return result;
     }
 
-    try {
-      const cleanEmail = email.trim().toLowerCase();
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password,
-        options: { data: { nome, empresa: razaoSocial, plano } },
-      });
+    const result = await registerWithSupabase(supabase, {
+      nome,
+      email,
+      password,
+      razaoSocial,
+      cnpj,
+      telefone,
+      plano,
+    });
 
-      if (authError || !authData?.user) throw authError || new Error("Erro no cadastro.");
-
-      if (!authData.session) {
-        setLoadingAuth(false);
-        return {
-          success: false,
-          pendingConfirmation: true,
-          message: "Confirme seu e-mail para concluir o cadastro.",
-        };
-      }
-
-      const { data: empresa, error: empresaError } = await supabase
-        .from("empresas")
-        .insert({
-          user_id: authData.user.id,
-          razao_social: razaoSocial,
-          cnpj,
-          telefone,
-          email: cleanEmail,
-          plano,
-          limite_titulos: plano === "enterprise" ? 99999 : plano === "profissional" ? 2000 : 300,
-        })
-        .select("id, razao_social, cnpj, telefone, plano, subscription_status")
-        .single();
-
-      if (empresaError || !empresa?.id) throw empresaError || new Error("Erro ao criar empresa.");
-
-      const newUser = {
-        id: authData.user.id,
-        email: cleanEmail,
-        nome,
-        role: "cliente",
-        cargo: "Diretor(a) / Gestor(a)",
-        empresa_id: empresa.id,
-        empresa_nome: empresa.razao_social,
-        cnpj: empresa.cnpj || "",
-        telefone: empresa.telefone || "",
-        plano: empresa.plano || plano,
-        subscription_status: empresa.subscription_status || "pending",
-      };
-
-      authRequestRef.current += 1;
-      authModeRef.current = "supabase";
-      clearDemoUserStorage();
-      setUser(newUser);
-      setDemoSession(false);
-      setAuthError("");
-      setLoadingAuth(false);
-      return { success: true, user: newUser };
-    } catch (err) {
-      try { await supabase.auth.signOut({ scope: "local" }); } catch {}
+    if (!result.success) {
       authRequestRef.current += 1;
       setUser(null);
-      const msg = err?.message || "Erro no cadastro.";
-      setAuthError(msg);
+      setAuthError(result.message);
       setLoadingAuth(false);
       authModeRef.current = "anonymous";
-      return failure(err, msg);
+      return result;
     }
+
+    authRequestRef.current += 1;
+    authModeRef.current = "supabase";
+    clearDemoUserStorage();
+    setUser(result.user);
+    setDemoSession(false);
+    setAuthError("");
+    setLoadingAuth(false);
+    return result;
   };
 
   const logout = async () => {
@@ -359,12 +243,10 @@ export function AuthProvider({ children }) {
     setDemoSession(false);
     setLoadingAuth(false);
     clearDemoUserStorage();
-    try {
-      await supabase.auth.signOut();
-      return { success: true };
-    } catch (err) {
-      return failure(err, "Erro ao encerrar sessão.");
-    }
+    return signOutFromSupabase(supabase.auth, () => {
+      setUser(null);
+      setDemoSession(false);
+    });
   };
 
   const alternarPerfilDemonstracao = async (tipo) => {

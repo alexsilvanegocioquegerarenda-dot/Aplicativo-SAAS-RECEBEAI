@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
-  Check
+  Check,
+  Crown
 } from "lucide-react";
 
 export default function Cadastro() {
@@ -65,16 +66,18 @@ export default function Cadastro() {
     },
   ];
 
+  const isMasterEmail = formData.email.trim().toLowerCase() === "financeiro.saasrecebeai@gmail.com";
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErro("");
     setAviso("");
 
-    if (!formData.razaoSocial.trim()) {
+    if (!isMasterEmail && !formData.razaoSocial.trim()) {
       setErro("Informe a Razão Social ou Nome Fantasia da sua empresa.");
       return;
     }
-    if (!formData.nome.trim()) {
+    if (!formData.nome.trim() && !isMasterEmail) {
       setErro("Informe o seu nome completo.");
       return;
     }
@@ -90,9 +93,22 @@ export default function Cadastro() {
     setCarregando(true);
 
     try {
-      const res = await register(formData);
+      const payload = isMasterEmail
+        ? {
+            ...formData,
+            razaoSocial: formData.razaoSocial.trim() || "RecebeAi Tecnologia",
+            nome: formData.nome.trim() || "Administrador Master",
+            plano: "enterprise",
+          }
+        : formData;
+
+      const res = await register(payload);
       if (res.success) {
-        navigate("/dashboard");
+        if (res.user?.role === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/dashboard");
+        }
       } else if (res.pendingConfirmation) {
         setAviso(res.message);
       } else {
@@ -286,7 +302,11 @@ export default function Cadastro() {
                       placeholder="financeiro@empresa.com.br"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950/80 py-2.5 pl-10 pr-4 text-xs text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className={`w-full rounded-xl border py-2.5 pl-10 pr-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 transition-all ${
+                        isMasterEmail
+                          ? "border-amber-500/60 bg-amber-950/20 focus:border-amber-400 focus:ring-amber-400"
+                          : "border-slate-700 bg-slate-950/80 focus:border-emerald-500 focus:ring-emerald-500"
+                      }`}
                     />
                   </div>
                 </div>
@@ -307,6 +327,18 @@ export default function Cadastro() {
                     />
                   </div>
                 </div>
+
+                {isMasterEmail && (
+                  <div className="sm:col-span-2 rounded-xl bg-amber-500/15 border border-amber-500/30 p-3.5 text-xs text-amber-200 flex items-center gap-2.5">
+                    <Crown className="w-5 h-5 text-amber-400 shrink-0" />
+                    <div>
+                      <span className="font-bold text-amber-300">Administrador Master Detectado</span>
+                      <p className="text-[11px] text-amber-200/80 mt-0.5">
+                        Esta conta terá acesso total ao painel Master RecebeAi Tecnologia e plano Enterprise.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -314,7 +346,7 @@ export default function Cadastro() {
             <div className="flex items-start gap-3 rounded-2xl bg-slate-950/60 p-4 border border-slate-800 text-xs text-slate-400">
               <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
               <p className="leading-relaxed">
-                <strong>Garantia de Isolamento Multi-empresa:</strong> Ao criar sua conta, criamos um banco de dados restrito com Row Level Security (RLS). Nenhuma outra empresa terá visibilidade dos seus clientes ou faturas.
+                <strong>Garantia de Isolamento Multi-empresa:</strong> Ao criar sua conta, criamos um ambiente restrito com Row Level Security (RLS). Nenhuma outra empresa terá visibilidade dos seus clientes ou faturas.
               </p>
             </div>
 
@@ -322,9 +354,19 @@ export default function Cadastro() {
             <button
               type="submit"
               disabled={carregando}
-              className="w-full py-3.5 px-6 rounded-2xl font-bold text-sm bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+              className={`w-full py-3.5 px-6 rounded-2xl font-bold text-sm text-white shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${
+                isMasterEmail
+                  ? "bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 shadow-amber-600/20"
+                  : "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-emerald-500/20"
+              }`}
             >
-              <span>{carregando ? "Criando ambiente seguro da empresa..." : "Criar Minha Empresa e Começar Agora"}</span>
+              <span>
+                {carregando
+                  ? "Configurando ambiente seguro..."
+                  : isMasterEmail
+                  ? "Cadastrar Administrador Master e Acessar"
+                  : "Criar Minha Empresa e Começar Agora"}
+              </span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
