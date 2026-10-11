@@ -21,14 +21,14 @@ function failure(error, fallbackMessage) {
   };
 }
 
-// Resolução de perfil autônoma sem requisições REST adicionais para a conta Master
+// Resolução do perfil isolada sem requisições adicionais para o Super Admin
 export async function resolveAuthenticatedProfile(supabaseClient, authUser) {
   if (!authUser?.id) throw new Error("Usuário Supabase inválido.");
 
   const emailUser = authUser.email?.trim().toLowerCase();
   const userRole = authUser.app_metadata?.role || authUser.user_metadata?.role;
 
-  // Se for Master ou Admin, libera o acesso global sem consulta de tabelas
+  // Se for o usuário Master, retorna o perfil de admin sem consultar tabelas auxiliares
   if (
     emailUser === MASTER_ADMIN_EMAIL.toLowerCase() ||
     userRole === "admin" ||
@@ -47,7 +47,7 @@ export async function resolveAuthenticatedProfile(supabaseClient, authUser) {
     };
   }
 
-  // Fluxo normal para clientes empresas
+  // Fluxo para clientes
   const { data: empresa, error } = await supabaseClient
     .from("empresas")
     .select("id, razao_social, cnpj, telefone, plano, subscription_status")
@@ -72,7 +72,6 @@ export async function resolveAuthenticatedProfile(supabaseClient, authUser) {
   };
 }
 
-// Perfis padrão para demonstração local
 export const DEFAULT_USERS = {
   admin: {
     id: "user-admin-master",
@@ -145,16 +144,19 @@ export function AuthProvider({ children }) {
         setUser(profile);
         setDemoSession(false);
         authModeRef.current = "supabase";
-        setAuthError(""); // Garante que nenhum erro fique visível no cabeçalho
+        
+        // Se for admin, garante a limpeza do erro
+        if (profile?.role === "admin" || profile?.email?.trim().toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase()) {
+          setAuthError("");
+        }
       } catch (err) {
         if (active && requestId === authRequestRef.current) {
-          // Fallback seguro: Se for a conta Master, concede o acesso mesmo se requisições auxiliares falharem
           const { data: userData } = await supabase.auth.getUser();
           if (userData?.user?.email?.trim().toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase()) {
             const profile = await resolveProfile(userData.user);
             setUser(profile);
             setDemoSession(false);
-            setAuthError("");
+            setAuthError(""); // Anula qualquer erro para o admin
           } else {
             setUser(null);
             setAuthError(err?.message || "Erro ao carregar perfil.");
@@ -172,7 +174,7 @@ export function AuthProvider({ children }) {
       authModeRef.current = "anonymous";
       setUser(null);
       setLoadingAuth(false);
-      setAuthError("Supabase não está configurado. O login real está indisponível.");
+      setAuthError("Supabase não está configurado.");
     } else {
       disableDemoMode();
       void syncCurrentSession();
@@ -239,7 +241,7 @@ export function AuthProvider({ children }) {
       clearDemoUserStorage();
       setUser(authenticatedProfile);
       setDemoSession(false);
-      setAuthError("");
+      setAuthError(""); // Garante authError limpo no login do Admin
       setLoadingAuth(false);
       return { success: true, user: authenticatedProfile };
     } catch (err) {
@@ -394,6 +396,9 @@ export function AuthProvider({ children }) {
 
   const currentEmpresaId = user?.empresa_id || null;
 
+  // Se o usuário for admin, força authError vazio para sumir com o badge em qualquer componente
+  const effectiveAuthError = isAdmin ? "" : authError;
+
   return (
     <AuthContext.Provider
       value={{
@@ -403,7 +408,7 @@ export function AuthProvider({ children }) {
         currentEmpresaId,
         loading: loadingAuth,
         loadingAuth,
-        authError,
+        authError: effectiveAuthError,
         clearAuthError: () => setAuthError(""),
         login,
         register,
