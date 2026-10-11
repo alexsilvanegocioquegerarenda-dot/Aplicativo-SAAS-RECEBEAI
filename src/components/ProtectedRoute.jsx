@@ -6,7 +6,6 @@ export default function ProtectedRoute({ children, requireAdmin = false }) {
   const { user, isAdmin, loading } = useAuth();
   const location = useLocation();
 
-  // 1. Enquanto carrega a sessão do Supabase, exibe o estado de carregamento
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">
@@ -18,16 +17,13 @@ export default function ProtectedRoute({ children, requireAdmin = false }) {
     );
   }
 
-  // 2. Se não houver usuário logado, redireciona para a tela de login
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 3. Se a rota exigir permissão de Admin/Master e o usuário não for admin, redireciona para o dashboard
   if (requireAdmin && !isAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // 4. Acesso permitido
   return children;
 }
