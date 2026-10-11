@@ -1,40 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Credenciais oficiais do projeto Supabase do RecebeAi (conta: alexsilva@negocioquegerarenda.com)
-const DEFAULT_SUPABASE_URL = "https://upuuqfojhqjgzsdycvxp.supabase.co";
-const DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_kT4M2GSyV2p0lY1ZRN6R5w_P85qxBAV";
+// Credenciais oficiais e definitivas do projeto Supabase do RecebeAi (conta: alexsilva@negocioquegerarenda.com)
+export const DEFAULT_SUPABASE_URL = "https://upuuqfojhqjgzsdycvxp.supabase.co";
+export const DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_kT4M2GSyV2p0lY1ZRN6R5w_P85qxBAV";
 
 // Polyfill global WebSocket para ambientes sem WebSocket nativo (ex: Node < 22)
 if (typeof globalThis.WebSocket === "undefined") {
   globalThis.WebSocket = class WebSocket {};
 }
 
-function sanitizeEnv(value) {
-  if (!value || typeof value !== "string") return "";
-  const trimmed = value.trim();
-  if (
-    trimmed === "" ||
-    trimmed === "undefined" ||
-    trimmed === "null" ||
-    trimmed.includes("placeholder") ||
-    trimmed.includes("example.com")
-  ) {
-    return "";
-  }
-  return trimmed;
-}
-
-// Acesso estático direto para que o Vite faça a substituição em tempo de build
-const rawViteUrl = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_SUPABASE_URL : "";
-const rawNodeUrl = typeof process !== "undefined" && process.env ? process.env.VITE_SUPABASE_URL : "";
-const customUrl = sanitizeEnv(rawViteUrl) || sanitizeEnv(rawNodeUrl);
-
-const rawViteKey = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_SUPABASE_ANON_KEY : "";
-const rawNodeKey = typeof process !== "undefined" && process.env ? process.env.VITE_SUPABASE_ANON_KEY : "";
-const customKey = sanitizeEnv(rawViteKey) || sanitizeEnv(rawNodeKey);
-
-export const supabaseUrl = customUrl && customUrl.startsWith("http") ? customUrl : DEFAULT_SUPABASE_URL;
-export const supabaseAnonKey = customKey && customKey.length > 10 ? customKey : DEFAULT_SUPABASE_ANON_KEY;
+// Fixação garantida das credenciais oficiais para evitar que variáveis antigas ou corrompidas no painel da Vercel causem 'Invalid API key'
+export const supabaseUrl = DEFAULT_SUPABASE_URL;
+export const supabaseAnonKey = DEFAULT_SUPABASE_ANON_KEY;
 
 // Como DEFAULT_SUPABASE_URL e DEFAULT_SUPABASE_ANON_KEY são as credenciais oficiais ativas de produção,
 // o Supabase está SEMPRE configurado e funcional.
