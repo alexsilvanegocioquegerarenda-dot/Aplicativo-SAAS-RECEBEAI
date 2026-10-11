@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React from "react";
 import { supabase, isSupabaseConfigured } from "@/api/supabaseClient";
 import { base44, clearDemoData, disableDemoMode } from "@/api/base44Client";
 import {
@@ -11,7 +11,8 @@ import {
   signOutFromSupabase
 } from "@/lib/authFlows";
 
-export const AuthContext = createContext(null);
+// Declaração usando a referência explícita React.createContext para evitar erros no Rollup/Vercel
+export const AuthContext = React.createContext(null);
 
 const AUTH_STORAGE_KEY = "recebeai_auth_user";
 const INITIAL_AUTH_STATE = getInitialAuthState();
@@ -46,16 +47,16 @@ export const DEFAULT_USERS = {
 };
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(INITIAL_AUTH_STATE.user);
-  const [loadingAuth, setLoadingAuth] = useState(INITIAL_AUTH_STATE.loadingAuth);
-  const [authError, setAuthError] = useState("");
-  const [demoSession, setDemoSession] = useState(false);
-  const authModeRef = useRef("initializing");
-  const authRequestRef = useRef(0);
+  const [user, setUser] = React.useState(INITIAL_AUTH_STATE.user);
+  const [loadingAuth, setLoadingAuth] = React.useState(INITIAL_AUTH_STATE.loadingAuth);
+  const [authError, setAuthError] = React.useState("");
+  const [demoSession, setDemoSession] = React.useState(false);
+  const authModeRef = React.useRef("initializing");
+  const authRequestRef = React.useRef(0);
 
   const resolveProfile = (authUser) => resolveAuthenticatedProfile(supabase, authUser);
 
-  useEffect(() => {
+  React.useEffect(() => {
     let active = true;
 
     const clearAuthenticatedUser = () => {
@@ -255,7 +256,7 @@ export function AuthProvider({ children }) {
     return result.user;
   };
 
-  // Libera o perfil Admin se o usuário tiver role "admin" ou se bater o email do MASTER_ADMIN_EMAIL
+  // Libera a permissão de admin se o usuário for role="admin" ou o email for o MASTER_ADMIN_EMAIL
   const isAdmin = demoSession
     ? user?.id === DEFAULT_USERS.admin.id
     : user?.role === "admin" || user?.email?.trim().toLowerCase() === MASTER_ADMIN_EMAIL?.trim().toLowerCase();
@@ -286,7 +287,7 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
+  const context = React.useContext(AuthContext);
   if (!context) {
     throw new Error("useAuth deve ser utilizado dentro de um AuthProvider");
   }
