@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
@@ -27,10 +27,25 @@ import Planos from './pages/Planos';
 import AdminPagamentos from './pages/AdminPagamentos';
 import { PrivacyPolicy, Support, TermsOfUse } from './pages/PublicInfo';
 
+function AuthRecoveryHandler() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const hash = window.location.hash || '';
+    const search = window.location.search || '';
+    if (hash.includes('type=recovery') || search.includes('type=recovery')) {
+      if (window.location.pathname !== '/redefinir-senha') {
+        navigate('/redefinir-senha' + hash + search, { replace: true });
+      }
+    }
+  }, [navigate]);
+  return null;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <AuthRecoveryHandler />
         <Routes>
           {/* 1. Primeira página do aplicativo: Landing Page de vendas e conversão */}
           <Route path="/" element={<LandingPage />} />

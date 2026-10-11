@@ -23,29 +23,81 @@ export default function RedefinirSenha() {
   const [verificando, setVerificando] = useState(true);
 
   useEffect(() => {
-    async function checkSession() {
+    let mounted = true;
+
+    async function initRecovery() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          setTemSessao(true);
+        // 1. Verificar se há código PKCE na URL (?code=...)
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get("code");
+        if (code) {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (!error && data?.session && mounted) {
+            setTemSessao(true);
+            setVerificando(false);
+            return;
+          }
         }
+
+        // 2. Verificar se há tokens ou erros no hash (#access_token=...&refresh_token=...)
+        const hash = window.location.hash.substring(1);
+        if (hash) {
+          const hashParams = new URLSearchParams(hash);
+          const accessToken = hashParams.get("access_token");
+          const refreshToken = hashParams.get("refresh_token");
+          const errorDesc = hashParams.get("error_description");
+          if (errorDesc && mounted) {
+            setErro(decodeURIComponent(errorDesc.replace(/\+/g, " ")));
+          }
+          if (accessToken && refreshToken) {
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            if (!error && data?.session && mounted) {
+              setTemSessao(true);
+              setVerificando(false);
+              return;
+            }
+          }
+        }
+
+        // 3. Verificar sessão ativa já existente
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && mounted) {
+          setTemSessao(true);
+          setVerificando(false);
+          return;
+        }
+
+        // 4. Aguardar caso o SDK do Supabase esteja processando o evento em segundo plano
+        setTimeout(async () => {
+          if (!mounted) return;
+          const { data: delayedSession } = await supabase.auth.getSession();
+          if (delayedSession?.session) {
+            setTemSessao(true);
+          }
+          setVerificando(false);
+        }, 1200);
       } catch (err) {
-        console.error("Erro ao verificar sessão de recuperação:", err);
-      } finally {
-        setVerificando(false);
+        console.error("Erro na validação do link de recuperação:", err);
+        if (mounted) setVerificando(false);
       }
     }
 
-    checkSession();
+    initRecovery();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" || session) {
-        setTemSessao(true);
-        setVerificando(false);
+        if (mounted) {
+          setTemSessao(true);
+          setVerificando(false);
+        }
       }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
