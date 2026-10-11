@@ -4,14 +4,15 @@ import { base44, clearDemoData, disableDemoMode } from "@/api/base44Client";
 import {
   getInitialAuthState,
   loadCurrentSupabaseUser,
-  MASTER_ADMIN_EMAIL,
   registerWithSupabase,
   resolveAuthenticatedProfile,
   signInWithSupabase,
   signOutFromSupabase
 } from "@/lib/authFlows";
 
-// Declaração usando a referência explícita React.createContext para evitar erros no Rollup/Vercel
+// Constante do usuário master declarada diretamente no contexto
+export const MASTER_ADMIN_EMAIL = "financeiro.saasrecebeai@gmail.com";
+
 export const AuthContext = React.createContext(null);
 
 const AUTH_STORAGE_KEY = "recebeai_auth_user";
@@ -21,13 +22,12 @@ function clearDemoUserStorage() {
   try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch (e) {}
 }
 
-// Contas padrão pré-configuradas para demonstração e acesso imediato
 export const DEFAULT_USERS = {
   admin: {
     id: "user-admin-master",
     nome: "Alexandre Silva",
     email: "admin@recebeai.com.br",
-    role: "admin", // Permissão total e acesso ao painel Master
+    role: "admin",
     cargo: "Super Administrador Master",
     empresa_id: "emp-master-recebeai",
     empresa_nome: "RecebeAi Tecnologia",
@@ -37,7 +37,7 @@ export const DEFAULT_USERS = {
     id: "user-cliente-demo",
     nome: "Mariana Souza",
     email: "financeiro@techsolutions.com.br",
-    role: "cliente", // Cliente empresa isolado
+    role: "cliente",
     cargo: "Gestora Financeira",
     empresa_id: "emp-demo-techsolutions",
     empresa_nome: "TechSolutions Informática Ltda",
@@ -114,7 +114,6 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // Login de Cliente ou Administrador
   const login = async (email, password) => {
     disableDemoMode();
     clearDemoUserStorage();
@@ -163,7 +162,6 @@ export function AuthProvider({ children }) {
     return result;
   };
 
-  // Cadastro de Nova Empresa Multi-tenant
   const register = async ({
     nome,
     email,
@@ -256,10 +254,9 @@ export function AuthProvider({ children }) {
     return result.user;
   };
 
-  // Libera a permissão de admin se o usuário for role="admin" ou o email for o MASTER_ADMIN_EMAIL
   const isAdmin = demoSession
     ? user?.id === DEFAULT_USERS.admin.id
-    : user?.role === "admin" || user?.email?.trim().toLowerCase() === MASTER_ADMIN_EMAIL?.trim().toLowerCase();
+    : user?.role === "admin" || user?.email?.trim().toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase();
 
   const currentEmpresaId = user?.empresa_id || null;
 
