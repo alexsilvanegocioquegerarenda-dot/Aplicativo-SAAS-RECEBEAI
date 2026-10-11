@@ -1,62 +1,33 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
-import { ShieldAlert, ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
-import { getProtectedRouteDecision } from "@/lib/authFlows";
+import { useAuth } from "@/contexts/AuthContext"; // ajuste o caminho se o seu AuthContext estiver em outra pasta
 
 export default function ProtectedRoute({ children, requireAdmin = false }) {
-  const { user, isAdmin, loadingAuth } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
   const location = useLocation();
-  const access = getProtectedRouteDecision({
-    loadingAuth,
-    user,
-    requireAdmin,
-    isAdmin,
-    subscriptionStatus: user?.subscription_status,
-    pathname: location.pathname,
-  });
 
-  if (access === "loading") {
+  // 1. Enquanto carrega a sessão do Supabase, exibe um estado de carregamento
+  if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+      <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-sm text-slate-400">Carregando permissões...</p>
+        </div>
       </div>
     );
   }
 
-  // Se não estiver autenticado, redireciona para a tela de login
-  if (access === "login") {
+  // 2. Se não houver usuário logado, redireciona para a tela de login
+  if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Se a rota for restrita ao Administrador e o usuário for um cliente comum
-  if (access === "forbidden") {
-    return (
-      <div className="mx-auto max-w-lg px-4 py-20 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-red-600 mb-4">
-          <ShieldAlert className="h-7 w-7" />
-        </div>
-        <h1 className="font-heading text-xl font-bold text-slate-900">Acesso Restrito ao Administrador</h1>
-        <p className="mt-2 text-sm text-slate-500 leading-relaxed">
-          Esta área é de uso exclusivo do administrador master do RecebeAi. Seus clientes e usuários comuns não possuem acesso a esta tela nem às credenciais do sistema.
-        </p>
-        <div className="mt-6">
-          <Link
-            to="/dashboard"
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-sm"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Voltar ao Meu Painel</span>
-          </Link>
-        </div>
-      </div>
-    );
+  // 3. Se a rota exigir permissão de Admin/Master e o usuário não for admin, bloqueia o acesso
+  if (requireAdmin && !isAdmin) {
+    return <Navigate to="/dashboard" replace />;
   }
 
-  if (access === "billing") {
-    return <Navigate to="/planos" replace state={{ reason: "subscription-required" }} />;
-  }
-
+  // 4. Acesso permitido
   return children;
 }
