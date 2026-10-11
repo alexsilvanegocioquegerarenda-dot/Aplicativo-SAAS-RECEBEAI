@@ -162,9 +162,14 @@ export async function signOutFromSupabase(auth, clearLocalState) {
 export async function resolveAuthenticatedProfile(supabase, authUser) {
   if (!authUser?.id) throw new Error("Usuário Supabase inválido.");
 
+  const emailUser = authUser.email?.trim().toLowerCase();
+  const userRole = authUser.app_metadata?.role || authUser.user_metadata?.role;
+
+  // Libera o perfil Master/Admin imediatamente se for o e-mail master ou tiver role "admin"/"master"
   if (
-    authUser.app_metadata?.role === "admin" &&
-    authUser.email?.trim().toLowerCase() === MASTER_ADMIN_EMAIL
+    emailUser === MASTER_ADMIN_EMAIL ||
+    userRole === "admin" ||
+    userRole === "master"
   ) {
     return {
       id: authUser.id,
@@ -172,13 +177,14 @@ export async function resolveAuthenticatedProfile(supabase, authUser) {
       nome: authUser.user_metadata?.nome || "Administrador Master",
       role: "admin",
       cargo: "Super Administrador Master",
-      empresa_id: null,
+      empresa_id: "emp-master-recebeai",
       empresa_nome: "RecebeAi Tecnologia",
       plano: "enterprise",
       subscription_status: "active",
     };
   }
 
+  // Fluxo normal de consulta de empresa para clientes do SaaS
   const { data: empresa, error } = await supabase
     .from("empresas")
     .select("id, razao_social, cnpj, telefone, plano, subscription_status")
