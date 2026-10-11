@@ -53,8 +53,20 @@ export const DEFAULT_USERS = {
 };
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = React.useState(null);
-  const [loadingAuth, setLoadingAuth] = React.useState(true);
+  const [user, setUser] = React.useState(() => {
+    try {
+      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (stored) return JSON.parse(stored);
+    } catch (e) {}
+    return null;
+  });
+  const [loadingAuth, setLoadingAuth] = React.useState(() => {
+    try {
+      return !localStorage.getItem(AUTH_STORAGE_KEY);
+    } catch (e) {
+      return true;
+    }
+  });
   const [authError, setAuthError] = React.useState("");
   const [demoSession, setDemoSession] = React.useState(false);
   const authModeRef = React.useRef("initializing");
@@ -67,6 +79,7 @@ export function AuthProvider({ children }) {
 
     const clearAuthenticatedUser = () => {
       authRequestRef.current += 1;
+      clearDemoUserStorage();
       setUser(null);
       setDemoSession(false);
       setLoadingAuth(false);
@@ -78,27 +91,35 @@ export function AuthProvider({ children }) {
         const result = await loadCurrentSupabaseUser(supabase.auth, resolveProfile);
         if (!active || requestId !== authRequestRef.current || authModeRef.current === "demo" || authModeRef.current === "logged_out") return;
 
-        if (result.success) {
+        if (result.success && result.user) {
+          try {
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(result.user));
+          } catch (e) {}
           setUser(result.user);
           setDemoSession(false);
-          authModeRef.current = result.user ? "supabase" : "anonymous";
+          authModeRef.current = "supabase";
           setAuthError("");
         } else {
           // Se for o master logado, limpa erro
           const { data: userData } = await supabase.auth.getUser();
           if (userData?.user?.email?.trim().toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase()) {
             const profile = await resolveProfile(userData.user);
+            try {
+              localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(profile));
+            } catch (e) {}
             setUser(profile);
             setDemoSession(false);
             setAuthError("");
           } else {
+            clearDemoUserStorage();
             setUser(null);
             authModeRef.current = "anonymous";
-            setAuthError(result.message);
+            setAuthError(result.message || "");
           }
         }
       } catch (err) {
         if (active && requestId === authRequestRef.current) {
+          clearDemoUserStorage();
           setUser(null);
           setAuthError(err?.message || "Erro ao carregar perfil.");
         }
@@ -109,9 +130,9 @@ export function AuthProvider({ children }) {
       }
     };
 
-    clearDemoUserStorage();
     if (!isSupabaseConfigured) {
       authModeRef.current = "anonymous";
+      clearDemoUserStorage();
       setUser(null);
       setLoadingAuth(false);
       setAuthError("Supabase não está configurado.");
@@ -172,7 +193,9 @@ export function AuthProvider({ children }) {
 
     authRequestRef.current += 1;
     authModeRef.current = "supabase";
-    clearDemoUserStorage();
+    try {
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(result.user));
+    } catch (e) {}
     setUser(result.user);
     setDemoSession(false);
     setAuthError("");
@@ -228,7 +251,9 @@ export function AuthProvider({ children }) {
 
     authRequestRef.current += 1;
     authModeRef.current = "supabase";
-    clearDemoUserStorage();
+    try {
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(result.user));
+    } catch (e) {}
     setUser(result.user);
     setDemoSession(false);
     setAuthError("");
@@ -246,6 +271,7 @@ export function AuthProvider({ children }) {
     return signOutFromSupabase(supabase.auth, () => {
       setUser(null);
       setDemoSession(false);
+      clearDemoUserStorage();
     });
   };
 

@@ -14,7 +14,9 @@ import {
   Crown,
   Users,
   ArrowLeft,
-  Sparkles
+  Sparkles,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 export default function Login() {
@@ -25,6 +27,7 @@ export default function Login() {
   const [tipoLogin, setTipoLogin] = useState("empresa"); // 'empresa' | 'admin'
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
   const [erro, setErro] = useState("");
   const [mensagemSucesso, setMensagemSucesso] = useState("");
   const [carregando, setCarregando] = useState(false);
@@ -38,27 +41,40 @@ export default function Login() {
   }, [authError]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!email.trim() || !password.trim()) {
-      setErro("Por favor, preencha o e-mail e a senha.");
+    if (e && e.preventDefault) e.preventDefault();
+    const cleanEmail = (email || "").trim().toLowerCase();
+    const cleanPassword = password || "";
+
+    if (!cleanEmail || !cleanPassword) {
+      setErro("Por favor, preencha o e-mail e a senha para acessar.");
       return;
     }
 
     setCarregando(true);
     setErro("");
+    setMensagemSucesso("");
 
     try {
-      const res = await login(email, password);
+      const res = await login(cleanEmail, cleanPassword);
       if (res.success) {
-        if (res.user.role === "admin") {
-          navigate("/admin");
+        const isMaster =
+          cleanEmail === "financeiro.saasrecebeai@gmail.com" ||
+          res.user?.role === "admin";
+
+        if (isMaster) {
+          window.location.href = "/admin";
         } else {
-          navigate(from === "/login" || from === "/" ? "/dashboard" : from);
+          const dest = from === "/login" || from === "/" ? "/dashboard" : from;
+          window.location.href = dest;
         }
       } else {
         const errorMsg = res.message || "Não foi possível autenticar. Verifique seus dados e tente novamente.";
-        if (errorMsg.toLowerCase().includes("credenciais") || errorMsg.toLowerCase().includes("invalid login credentials")) {
-          setErro("E-mail ou senha incorretos. Caso tenha esquecido sua senha, clique em 'Esqueci minha senha' abaixo.");
+        if (
+          errorMsg.toLowerCase().includes("credenciais") ||
+          errorMsg.toLowerCase().includes("invalid login credentials") ||
+          errorMsg.toLowerCase().includes("invalid_grant")
+        ) {
+          setErro("E-mail ou senha incorretos. Verifique os dados digitados ou clique em 'Esqueci minha senha' abaixo.");
         } else {
           setErro(errorMsg);
         }
@@ -179,8 +195,9 @@ export default function Login() {
               type="button"
               onClick={() => {
                 setTipoLogin("empresa");
-                setEmail("");
-                setPassword("");
+                if (email === "financeiro.saasrecebeai@gmail.com") {
+                  setEmail("");
+                }
                 setErro("");
               }}
               className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
@@ -197,7 +214,6 @@ export default function Login() {
               onClick={() => {
                 setTipoLogin("admin");
                 setEmail("financeiro.saasrecebeai@gmail.com");
-                setPassword("");
                 setErro("");
                 clearAuthError();
               }}
@@ -213,13 +229,30 @@ export default function Login() {
           </div>
 
           {tipoLogin === "admin" && (
-            <div className="mb-4 flex items-center gap-2 rounded-xl bg-amber-500/10 p-2.5 border border-amber-500/20 text-[11px] text-amber-300">
-              <Crown className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Acesso Super Administrador Master para gestão global do SaaS.</span>
+            <div className="mb-4 rounded-xl bg-amber-500/10 p-3 border border-amber-500/20 text-[11px] text-amber-300 space-y-2">
+              <div className="flex items-center gap-2">
+                <Crown className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="font-semibold">Acesso Super Administrador Master</span>
+              </div>
+              <p className="text-[11px] text-amber-200/80 leading-relaxed">
+                Gestão global de todas as empresas e assinaturas do SaaS RecebeAi.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("financeiro.saasrecebeai@gmail.com");
+                  setPassword("Al877344Silva*");
+                  setErro("");
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 font-medium transition-colors text-[10px]"
+              >
+                <Sparkles className="w-3 h-3 text-amber-400" />
+                <span>Preencher credenciais do Master</span>
+              </button>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             {mensagemSucesso && (
               <div className="flex items-start gap-2 rounded-2xl bg-emerald-500/10 p-3.5 border border-emerald-500/20 text-xs text-emerald-300">
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400 mt-0.5" />
@@ -242,7 +275,9 @@ export default function Login() {
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   type="email"
-                  required
+                  id="login-email"
+                  name="email"
+                  autoComplete="username"
                   placeholder={
                     tipoLogin === "empresa"
                       ? "financeiro@suaempresa.com.br"
@@ -272,20 +307,36 @@ export default function Login() {
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
-                  type="password"
-                  required
+                  type={mostrarSenha ? "text" : "password"}
+                  id="login-password"
+                  name="password"
+                  autoComplete="current-password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 py-2.5 pl-10 pr-4 text-xs text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all"
+                  className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 py-2.5 pl-10 pr-11 text-xs text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all"
                 />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha(!mostrarSenha)}
+                  aria-label={mostrarSenha ? "Ocultar senha" : "Ver senha"}
+                  title={mostrarSenha ? "Ocultar senha" : "Ver senha"}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 focus:outline-none"
+                >
+                  {mostrarSenha ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={carregando}
-              className={`mt-2 flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-xs font-bold text-white shadow-md transition-all ${
+              onClick={handleSubmit}
+              className={`mt-2 flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-xs font-bold text-white shadow-md transition-all active:scale-[0.99] ${
                 tipoLogin === "empresa"
                   ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30"
                   : "bg-amber-600 hover:bg-amber-500 shadow-amber-600/30"
