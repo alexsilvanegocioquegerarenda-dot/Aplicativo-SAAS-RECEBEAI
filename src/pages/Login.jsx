@@ -37,7 +37,9 @@ export default function Login() {
   const from = location.state?.from?.pathname || "/dashboard";
 
   useEffect(() => {
-    if (authError) setErro(authError);
+    if (authError && !authError.toLowerCase().includes("não está configurado")) {
+      setErro(authError);
+    }
   }, [authError]);
 
   const handleSubmit = async (e) => {

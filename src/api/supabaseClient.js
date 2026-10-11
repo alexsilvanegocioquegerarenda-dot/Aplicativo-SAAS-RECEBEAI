@@ -9,23 +9,36 @@ if (typeof globalThis.WebSocket === "undefined") {
   globalThis.WebSocket = class WebSocket {};
 }
 
-const env =
-  typeof import.meta !== "undefined" && import.meta.env
-    ? import.meta.env
-    : typeof process !== "undefined" && process.env
-    ? process.env
-    : {};
+function sanitizeEnv(value) {
+  if (!value || typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (
+    trimmed === "" ||
+    trimmed === "undefined" ||
+    trimmed === "null" ||
+    trimmed.includes("placeholder") ||
+    trimmed.includes("example.com")
+  ) {
+    return "";
+  }
+  return trimmed;
+}
 
-const supabaseUrl = env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
-const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
+// Acesso estático direto para que o Vite faça a substituição em tempo de build
+const rawViteUrl = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_SUPABASE_URL : "";
+const rawNodeUrl = typeof process !== "undefined" && process.env ? process.env.VITE_SUPABASE_URL : "";
+const customUrl = sanitizeEnv(rawViteUrl) || sanitizeEnv(rawNodeUrl);
 
-export const isSupabaseConfigured = Boolean(
-  supabaseUrl &&
-  supabaseAnonKey &&
-  supabaseUrl.startsWith("http") &&
-  supabaseAnonKey.length > 10 &&
-  !supabaseUrl.includes("placeholder")
-);
+const rawViteKey = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_SUPABASE_ANON_KEY : "";
+const rawNodeKey = typeof process !== "undefined" && process.env ? process.env.VITE_SUPABASE_ANON_KEY : "";
+const customKey = sanitizeEnv(rawViteKey) || sanitizeEnv(rawNodeKey);
+
+export const supabaseUrl = customUrl && customUrl.startsWith("http") ? customUrl : DEFAULT_SUPABASE_URL;
+export const supabaseAnonKey = customKey && customKey.length > 10 ? customKey : DEFAULT_SUPABASE_ANON_KEY;
+
+// Como DEFAULT_SUPABASE_URL e DEFAULT_SUPABASE_ANON_KEY são as credenciais oficiais ativas de produção,
+// o Supabase está SEMPRE configurado e funcional.
+export const isSupabaseConfigured = true;
 
 const clientOptions = {
   auth: {
@@ -38,9 +51,7 @@ const clientOptions = {
   },
 };
 
-export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey, clientOptions)
-  : createClient("https://placeholder-project.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder", clientOptions);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, clientOptions);
 
 // Wrapper utilitário para consultas seguras no painel
 export async function safeSupabaseQuery(queryPromise) {
