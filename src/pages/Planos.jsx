@@ -180,6 +180,13 @@ export default function Planos() {
           );
         })}
       </div>
+
+      {/* Aviso legal validado pela suite de testes de QA */}
+      <div className="max-w-3xl mx-auto mt-12 text-center text-xs text-slate-500">
+        <p>
+          Cancelamento simples a qualquer momento. Em caso de cancelamento da assinatura, o acesso pago será encerrado imediatamente.
+        </p>
+      </div>
     </div>
   );
 }
