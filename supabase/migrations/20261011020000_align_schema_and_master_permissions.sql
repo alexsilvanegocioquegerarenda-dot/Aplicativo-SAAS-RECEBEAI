@@ -150,31 +150,9 @@ BEGIN
 END;
 $$;
 
--- Executar seed para empresas existentes
-DO $$
-DECLARE
-  r RECORD;
-BEGIN
-  FOR r IN SELECT id FROM public.empresas LOOP
-    PERFORM public.seed_default_company_data(r.id);
-  END LOOP;
+    IF v_empresa_id IS NOT NULL THEN
+      PERFORM public.seed_default_company_data(v_empresa_id);
+    END IF;
+  END IF;
 END;
 $$;
-
--- Trigger para semear automaticamente em novas empresas
-CREATE OR REPLACE FUNCTION public.handle_empresa_seeded()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-  PERFORM public.seed_default_company_data(NEW.id);
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS on_empresa_created_seed ON public.empresas;
-CREATE TRIGGER on_empresa_created_seed
-  AFTER INSERT ON public.empresas
-  FOR EACH ROW
-  EXECUTE FUNCTION public.handle_empresa_seeded();
