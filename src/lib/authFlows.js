@@ -225,15 +225,25 @@ export async function resolveAuthenticatedProfile(supabase, authUser) {
   const normalizedEmail = authUser.email?.trim().toLowerCase();
   const isMaster = normalizedEmail === MASTER_ADMIN_EMAIL.toLowerCase();
 
-  // 1. SE FOR MASTER / ADMIN: Retorna imediatamente sem consultar a tabela "empresas"
+  // 1. SE FOR MASTER / ADMIN: Busca empresa vinculada ou usa contexto master
   if (isMaster) {
+    let masterEmpresaId = null;
+    try {
+      const { data: empresa } = await supabase
+        .from("empresas")
+        .select("id")
+        .eq("user_id", authUser.id)
+        .maybeSingle();
+      if (empresa?.id) masterEmpresaId = empresa.id;
+    } catch (e) {}
+
     return {
       id: authUser.id,
       email: authUser.email,
       nome: authUser.user_metadata?.nome || "Administrador Master",
       role: "admin",
       cargo: "Super Administrador Master",
-      empresa_id: null,
+      empresa_id: masterEmpresaId,
       empresa_nome: "RecebeAi Tecnologia",
       plano: "enterprise",
       subscription_status: "active",

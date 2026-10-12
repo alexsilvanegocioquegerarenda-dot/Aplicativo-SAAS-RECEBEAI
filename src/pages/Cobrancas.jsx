@@ -77,9 +77,8 @@ export default function Cobrancas() {
     const rec = recebiveis.find((r) => String(r.id) === String(selectedRecebivelId));
     const reg = reguas.find((rg) => String(rg.id) === String(selectedReguaId));
 
-    if (!reg) return;
-
-    let msg = reg.mensagem;
+    const defaultTemplate = "Olá {{cliente}}! Notamos uma pendência na fatura {{nota_fiscal}} no valor de {{valor}}, vencida em {{vencimento}}. Chave PIX: {{chave_pix}}";
+    let msg = reg?.mensagem || defaultTemplate;
     msg = msg.replace(/\{\{cliente\}\}/g, cli?.nome || "Cliente");
     msg = msg.replace(/\{\{nota_fiscal\}\}/g, rec?.nota_fiscal || "NF-XXXX");
     msg = msg.replace(/\{\{valor\}\}/g, rec ? formatCurrency(rec.valor) : "R$ 0,00");

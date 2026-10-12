@@ -48,7 +48,13 @@ export default function Importacoes() {
   const carregarImportacoes = async () => {
     try {
       const lista = await base44.entities.Importacao.list("-created_date", 100);
-      setImportacoes(lista || []);
+      const normalized = (lista || []).map((imp) => ({
+        ...imp,
+        nome_arquivo: imp.nome_arquivo || imp.arquivo_nome || "arquivo.csv",
+        quantidade_registros: imp.quantidade_registros ?? imp.total_registros ?? 0,
+        valor_total: imp.valor_total ?? 0,
+      }));
+      setImportacoes(normalized);
     } finally {
       setLoading(false);
     }
@@ -204,8 +210,12 @@ export default function Importacoes() {
       const novoLote = await base44.entities.Importacao.create({
         id: loteId,
         nome_arquivo: nomeArq,
+        arquivo_nome: nomeArq,
         origem: "csv",
         quantidade_registros: linhasPrevia.length,
+        total_registros: linhasPrevia.length,
+        total_sucesso: linhasPrevia.length,
+        total_erros: 0,
         valor_total: valorTotalPrevisto,
         status: "concluida",
         detalhes: `${linhasPrevia.length} títulos importados com sucesso via CSV`,

@@ -387,32 +387,50 @@ export default function Layout({ children }) {
 
         {/* Page Body */}
         <main className="flex-1 overflow-y-auto">
-          {dataReadError ? (
-            <div role="alert" className="mx-auto mt-12 max-w-xl rounded-xl border border-red-200 bg-white p-6 text-center shadow-sm">
+          {dataReadError && (
+            <div role="alert" className="mx-auto my-4 max-w-xl rounded-xl border border-red-200 bg-white p-6 text-center shadow-sm">
               <p className="text-sm font-semibold text-slate-900">Não foi possível carregar os dados. Verifique sua conexão e tente novamente.</p>
-              <button
-                type="button"
-                onClick={() => {
-                  dataReadErrorRef.current = false;
-                  clearDataReadError();
-                  setDataReadError(null);
-                  setSupabaseStatus(isSupabaseConfigured ? "configured" : "not_configured");
-                  testarConexaoSupabase().then((result) => {
-                    if (!dataReadErrorRef.current) setSupabaseStatus(result.status);
-                  });
-                  setReadRetryKey((key) => key + 1);
-                }}
-                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                Tentar novamente
-              </button>
+              <div className="mt-4 flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    dataReadErrorRef.current = false;
+                    clearDataReadError();
+                    setDataReadError(null);
+                    setSupabaseStatus(isSupabaseConfigured ? "configured" : "not_configured");
+                    testarConexaoSupabase().then((result) => {
+                      if (!dataReadErrorRef.current) setSupabaseStatus(result.status);
+                    });
+                    setReadRetryKey((key) => key + 1);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Tentar novamente
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    dataReadErrorRef.current = false;
+                    clearDataReadError();
+                    setDataReadError(null);
+                    base44.resetDemoData();
+                    setReadRetryKey((key) => key + 1);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 shadow-sm"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Ver dados de demonstração
+                </button>
+              </div>
               {dataReadError.kind === "permission" && (
                 <p className="mt-3 text-xs text-amber-700">O Supabase recusou o acesso. Verifique a autenticação e as permissões desta empresa.</p>
               )}
             </div>
-          ) : dataWriteError ? (
-            <div role="alert" className="mx-auto mt-12 max-w-xl rounded-xl border border-red-200 bg-white p-6 text-center shadow-sm">
+          )}
+
+          {dataWriteError && (
+            <div role="alert" className="mx-auto my-4 max-w-xl border border-red-200 bg-white p-6 text-center shadow-sm">
               <p className="text-sm font-semibold text-slate-900">
                 {dataWriteError.source === "demo"
                   ? "Não foi possível gravar os dados locais da demonstração."
@@ -427,9 +445,9 @@ export default function Layout({ children }) {
                 Fechar
               </button>
             </div>
-          ) : (
-            <div key={readRetryKey} className="contents">{children}</div>
           )}
+
+          <div key={readRetryKey} className="contents">{children}</div>
         </main>
       </div>
     </div>

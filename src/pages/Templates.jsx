@@ -55,7 +55,13 @@ export default function Templates() {
   const carregarTemplates = async () => {
     try {
       const list = await base44.entities.TemplateMensagem.list();
-      setTemplates(list);
+      const normalized = (list || []).map((t) => ({
+        ...t,
+        nome: t.nome || t.titulo || "Template de Cobrança",
+        conteudo: t.conteudo || t.texto || "",
+        nivel: t.nivel || t.prioridade || "media",
+      }));
+      setTemplates(normalized);
     } finally {
       setLoading(false);
     }
@@ -98,11 +104,17 @@ export default function Templates() {
     if (!form.nome || !form.conteudo) return;
     setSalvando(true);
     try {
+      const payload = {
+        ...form,
+        titulo: form.nome,
+        texto: form.conteudo,
+        prioridade: form.nivel,
+      };
       if (templateEditando) {
-        const atualizado = await base44.entities.TemplateMensagem.update(templateEditando.id, form);
-        setTemplates((prev) => prev.map((t) => (t.id === templateEditando.id ? atualizado : t)));
+        const atualizado = await base44.entities.TemplateMensagem.update(templateEditando.id, payload);
+        setTemplates((prev) => prev.map((t) => (t.id === templateEditando.id ? { ...t, ...atualizado } : t)));
       } else {
-        const criado = await base44.entities.TemplateMensagem.create(form);
+        const criado = await base44.entities.TemplateMensagem.create(payload);
         setTemplates((prev) => [criado, ...prev]);
       }
       setModalAberto(false);

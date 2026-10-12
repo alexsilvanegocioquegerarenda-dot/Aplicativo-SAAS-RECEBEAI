@@ -48,8 +48,10 @@ export default function IAFinanceira() {
           ];
           // Ordem cronológica
           [...historico].reverse().forEach((item) => {
-            if (item.pergunta) novas.push({ role: "user", text: item.pergunta });
-            if (item.resposta) novas.push({ role: "assistant", text: item.resposta });
+            const userText = item.pergunta || (item.role === "user" ? item.content : null);
+            const botText = item.resposta || (item.role === "assistant" ? item.content : null);
+            if (userText) novas.push({ role: "user", text: userText });
+            if (botText) novas.push({ role: "assistant", text: botText });
           });
           setMensagens(novas);
         }

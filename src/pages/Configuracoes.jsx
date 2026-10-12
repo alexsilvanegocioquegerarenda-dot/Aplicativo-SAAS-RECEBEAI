@@ -104,20 +104,44 @@ export default function Configuracoes() {
 
   useEffect(() => {
     async function load() {
-      const cfg = await base44.entities.Configuracao.get();
-      if (cfg) {
-        setConfig((prev) => ({
-          ...prev,
-          ...cfg,
-          telefone_empresa: cfg.telefone_empresa || cfg.telefone || "",
-          email_cobranca: cfg.email_cobranca || cfg.email || "",
-          plano_atual: cfg.plano_atual || cfg.plano || prev.plano_atual,
-        }));
+      try {
+        const cfg = await base44.entities.Configuracao.get();
+        if (cfg) {
+          setConfig((prev) => ({
+            ...prev,
+            ...cfg,
+            razao_social: cfg.razao_social || user?.empresa_nome || prev.razao_social,
+            telefone_empresa: cfg.telefone_empresa || cfg.telefone || user?.telefone || "",
+            email_cobranca: cfg.email_cobranca || cfg.email || user?.email || "",
+            plano_atual: cfg.plano_atual || cfg.plano || user?.plano || prev.plano_atual,
+          }));
+        } else if (user) {
+          setConfig((prev) => ({
+            ...prev,
+            razao_social: user.empresa_nome || prev.razao_social,
+            cnpj: user.cnpj || prev.cnpj,
+            telefone_empresa: user.telefone || prev.telefone_empresa,
+            email_cobranca: user.email || prev.email_cobranca,
+            plano_atual: user.plano || prev.plano_atual,
+          }));
+        }
+      } catch (e) {
+        if (user) {
+          setConfig((prev) => ({
+            ...prev,
+            razao_social: user.empresa_nome || prev.razao_social,
+            cnpj: user.cnpj || prev.cnpj,
+            telefone_empresa: user.telefone || prev.telefone_empresa,
+            email_cobranca: user.email || prev.email_cobranca,
+            plano_atual: user.plano || prev.plano_atual,
+          }));
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     load();
-  }, []);
+  }, [user]);
 
   const handleSalvar = async (e) => {
     e.preventDefault();
