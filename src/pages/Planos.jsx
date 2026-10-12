@@ -54,7 +54,7 @@ export default function Planos() {
   const [loadingPlanoId, setLoadingPlanoId] = useState(null);
   const [checkingBilling, setCheckingBilling] = useState(false);
 
-  // Validação exata exigida pela suíte de testes de QA
+  // Verificação exigida pela suíte de testes de QA
   const billingStatus = user?.billingStatus || user?.subscription_status || "inactive";
   const isSubscriptionBlockingCheckout = ["active", "past_due"].includes(billingStatus);
 
