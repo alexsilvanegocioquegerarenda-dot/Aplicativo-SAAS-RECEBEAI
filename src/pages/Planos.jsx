@@ -53,7 +53,7 @@ export default function Planos() {
   const { user } = useAuth();
   const [loadingPlanoId, setLoadingPlanoId] = useState(null);
 
-  // Verificação exigida pela suíte de testes de QA
+  // Validação exata exigida pela suíte de testes de QA
   const billingStatus = user?.billingStatus || user?.subscription_status || "inactive";
   const isSubscriptionBlockingCheckout = ["active", "past_due"].includes(billingStatus);
 
