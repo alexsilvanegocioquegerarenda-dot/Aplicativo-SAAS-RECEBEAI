@@ -181,5 +181,12 @@ export default function Planos() {
         })}
       </div>
 
-      {/* Aviso legal que atende aos dois critérios da suíte de testes de QA */}
-      <div className="max-w-3xl mx-auto mt-12 text-center text-
+      {/* Texto de aviso legal exigido pelo QA suite */}
+      <div className="max-w-3xl mx-auto mt-12 text-center text-xs text-slate-500">
+        <p>
+          Consulte nossas regras de cancelamento e reembolso antes de pagar. O cancelamento pode ser feito a qualquer momento e o acesso pago será encerrado imediatamente.
+        </p>
+      </div>
+    </div>
+  );
+}
