@@ -28,10 +28,10 @@
       });
     }
 
-    const isTestEmail = !user_email || !user_email.includes("@");
-    const payerEmail = isTestEmail
-      ? `comprador_${Date.now()}@testuser.com`
-      : user_email;
+    const payerEmail =
+      user_email && user_email.includes("@") && !user_email.includes("testuser")
+        ? user_email
+        : `comprador_${Math.floor(Math.random() * 100000)}@gmail.com`;
 
     const formattedPrice = Number(parseFloat(price || 29.9).toFixed(2));
 
@@ -53,7 +53,6 @@
         user_id: user_id || "guest",
         plano_id: plano_id || "desconhecido",
       }),
-      status: "authorized",
     };
 
     const mpResponse = await fetch("https://api.mercadopago.com/preapproval", {
@@ -68,7 +67,7 @@
     const data = await mpResponse.json();
 
     if (!mpResponse.ok) {
-      console.error("Erro na API do Mercado Pago:", data);
+      console.error("Detalhes da recusa do Mercado Pago:", JSON.stringify(data));
       return res.status(mpResponse.status).json({
         error: "Recusado pelo Mercado Pago",
         details: data,
