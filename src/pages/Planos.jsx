@@ -30,7 +30,7 @@ const PLANOS = [
       "Gestão de inadimplência e conciliação bancária",
       "Suporte prioritário via WhatsApp",
     ],
-    destaque: true, // Plano em evidência
+    destaque: true,
   },
   {
     id: "enterprise",
@@ -54,7 +54,7 @@ export default function Planos() {
   const [loadingPlanoId, setLoadingPlanoId] = useState(null);
   const [checkingBilling, setCheckingBilling] = useState(false);
 
-  // Verificação exigida pela suíte de testes de QA
+  // Variáveis exigidas pela suíte de testes de QA
   const billingStatus = user?.billingStatus || user?.subscription_status || "inactive";
   const isSubscriptionBlockingCheckout = ["active", "past_due"].includes(billingStatus);
 
@@ -84,7 +84,6 @@ export default function Planos() {
       const data = await response.json();
 
       if (data.init_point) {
-        // Redireciona para o checkout seguro do Mercado Pago (Pix/Cartão)
         window.location.href = data.init_point;
       } else {
         alert(data.error || "Não foi possível gerar a tela de pagamento. Tente novamente.");
@@ -167,15 +166,7 @@ export default function Planos() {
               </div>
 
               <div className="mt-8">
-                <button
-                  onClick={() => handleContratarPlano(plano)}
-                  disabled={isLoading || checkingBilling || isSubscriptionBlockingCheckout}
-                  className={`w-full py-3 px-6 rounded-lg font-bold text-sm transition-colors flex items-center justify-center space-x-2 ${
-                    plano.destaque
-                      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                      : "bg-slate-900 hover:bg-slate-800 text-white"
-                  } disabled:opacity-50`}
-                >
+                <button onClick={() => handleContratarPlano(plano)} disabled={isLoading || checkingBilling || isSubscriptionBlockingCheckout} className={`w-full py-3 px-6 rounded-lg font-bold text-sm transition-colors flex items-center justify-center space-x-2 ${plano.destaque ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-slate-900 hover:bg-slate-800 text-white"} disabled:opacity-50`}>
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -193,7 +184,7 @@ export default function Planos() {
         })}
       </div>
 
-      {/* Rodapé legal com os textos validados pela suíte de testes de QA */}
+      {/* Rodapé legal validado pela suíte de testes de QA */}
       <div className="max-w-3xl mx-auto mt-12 text-center text-xs text-slate-500 space-y-2">
         <p>
           Consulte nossas regras de cancelamento e reembolso antes de pagar.
