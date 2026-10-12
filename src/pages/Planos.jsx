@@ -181,10 +181,13 @@ export default function Planos() {
         })}
       </div>
 
-      {/* Texto de aviso legal exigido pelo QA suite */}
-      <div className="max-w-3xl mx-auto mt-12 text-center text-xs text-slate-500">
+      {/* Rodapé legal com os textos validados pela suíte de testes de QA */}
+      <div className="max-w-3xl mx-auto mt-12 text-center text-xs text-slate-500 space-y-2">
         <p>
-          Consulte nossas regras de cancelamento e reembolso antes de pagar. O cancelamento pode ser feito a qualquer momento e o acesso pago será encerrado imediatamente.
+          Consulte nossas regras de cancelamento e reembolso antes de pagar.
+        </p>
+        <p>
+          Cancelamento simples a qualquer momento. Em caso de cancelamento da assinatura, o acesso pago será encerrado imediatamente.
         </p>
       </div>
     </div>
