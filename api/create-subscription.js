@@ -1,6 +1,7 @@
 import { MercadoPagoConfig, PreApproval } from "mercadopago";
 
 export default async function handler(req, res) {
+  // Configuração dos cabeçalhos CORS
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
@@ -12,11 +13,13 @@ export default async function handler(req, res) {
     "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
   );
 
+  // Tratamento da requisição preflight (OPTIONS)
   if (req.method === "OPTIONS") {
     res.status(200).end();
     return;
   }
 
+  // Permite apenas requisições POST
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Método não permitido. Use POST." });
   }
@@ -26,10 +29,11 @@ export default async function handler(req, res) {
 
     const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
     if (!accessToken) {
-      return res.status(500).json({ error: "MERCADOPAGO_ACCESS_TOKEN não configurado." });
+      console.error("MERCADOPAGO_ACCESS_TOKEN não está configurado.");
+      return res.status(500).json({ error: "MERCADOPAGO_ACCESS_TOKEN não configurado nas variáveis de ambiente." });
     }
 
-    // E-mail de fallback caso o utilizador não esteja autenticado ou em teste local
+    // Garante um e-mail válido para a API do Mercado Pago
     const payerEmail = user_email && user_email.includes("@") 
       ? user_email 
       : "cliente_teste_recebeai@testuser.com";
