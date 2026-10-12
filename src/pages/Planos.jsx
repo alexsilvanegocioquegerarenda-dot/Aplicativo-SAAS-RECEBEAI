@@ -181,10 +181,10 @@ export default function Planos() {
         })}
       </div>
 
-      {/* Aviso legal validado pela suite de testes de QA */}
+      {/* Termos e regras exigidos pela bateria de testes QA */}
       <div className="max-w-3xl mx-auto mt-12 text-center text-xs text-slate-500">
         <p>
-          Cancelamento simples a qualquer momento. Em caso de cancelamento da assinatura, o acesso pago será encerrado imediatamente.
+          Consulte nossas regras de cancelamento e reembolso antes de pagar. Cancelamento simples a qualquer momento, o acesso pago será encerrado imediatamente.
         </p>
       </div>
     </div>
