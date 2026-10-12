@@ -124,7 +124,7 @@ BEGIN
 END;
 $$;
 
--- 8. Função para semear réguas e templates padrão para qualquer empresa ativa
+-- 8. Função para semear réguas e templates padrão
 CREATE OR REPLACE FUNCTION public.seed_default_company_data(p_empresa_id UUID)
 RETURNS VOID
 LANGUAGE plpgsql
@@ -149,6 +149,22 @@ BEGIN
   END IF;
 END;
 $$;
+
+-- 9. Semear réguas e templates na empresa do Master Admin
+DO $$
+DECLARE
+  v_master_id UUID;
+  v_empresa_id UUID;
+BEGIN
+  SELECT id INTO v_master_id
+  FROM auth.users
+  WHERE lower(trim(email)) = 'financeiro.saasrecebeai@gmail.com';
+
+  IF v_master_id IS NOT NULL THEN
+    SELECT id INTO v_empresa_id
+    FROM public.empresas
+    WHERE user_id = v_master_id
+    LIMIT 1;
 
     IF v_empresa_id IS NOT NULL THEN
       PERFORM public.seed_default_company_data(v_empresa_id);
