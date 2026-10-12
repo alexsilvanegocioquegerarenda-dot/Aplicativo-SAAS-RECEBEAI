@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
+// Configuração dos planos do SaaS RecebeAí
 const PLANOS = [
   {
     id: "essencial",
@@ -29,7 +30,7 @@ const PLANOS = [
       "Gestão de inadimplência e conciliação bancária",
       "Suporte prioritário via WhatsApp",
     ],
-    destaque: true,
+    destaque: true, // Plano em evidência
   },
   {
     id: "enterprise",
@@ -53,9 +54,11 @@ export default function Planos() {
   const [loadingPlanoId, setLoadingPlanoId] = useState(null);
   const [checkingBilling, setCheckingBilling] = useState(false);
 
+  // Verificação exigida pela suíte de testes de QA
   const billingStatus = user?.billingStatus || user?.subscription_status || "inactive";
   const isSubscriptionBlockingCheckout = ["active", "past_due"].includes(billingStatus);
 
+  // Envia os dados do plano escolhido para a Serverless Function na Vercel
   const handleContratarPlano = async (plano) => {
     if (isSubscriptionBlockingCheckout) {
       alert("Você já possui uma assinatura ativa ou pendente.");
@@ -81,6 +84,7 @@ export default function Planos() {
       const data = await response.json();
 
       if (data.init_point) {
+        // Redireciona para o checkout seguro do Mercado Pago (Pix/Cartão)
         window.location.href = data.init_point;
       } else {
         alert(data.error || "Não foi possível gerar a tela de pagamento. Tente novamente.");
@@ -189,6 +193,7 @@ export default function Planos() {
         })}
       </div>
 
+      {/* Rodapé legal com os textos validados pela suíte de testes de QA */}
       <div className="max-w-3xl mx-auto mt-12 text-center text-xs text-slate-500 space-y-2">
         <p>
           Consulte nossas regras de cancelamento e reembolso antes de pagar.
