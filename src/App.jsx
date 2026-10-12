@@ -25,7 +25,7 @@ import IAFinanceira from './pages/IAFinanceira';
 import Recuperacao from './pages/Recuperacao';
 import Planos from './pages/Planos';
 import AdminPagamentos from './pages/AdminPagamentos';
-import { PrivacyPolicy, Support, TermsOfUse } from './pages/PublicInfo';
+import { CancellationRefundPolicy, PrivacyPolicy, Support, TermsOfUse } from './pages/PublicInfo';
 
 function AuthRecoveryHandler() {
   const navigate = useNavigate();
@@ -51,6 +51,9 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/termos" element={<TermsOfUse />} />
           <Route path="/privacidade" element={<PrivacyPolicy />} />
+          <Route path="/cancelamento-e-reembolso" element={<CancellationRefundPolicy />} />
+          <Route path="/reembolso" element={<CancellationRefundPolicy />} />
+          <Route path="/cancelamento" element={<CancellationRefundPolicy />} />
           <Route path="/suporte" element={<Support />} />
 
           {/* 2. Rotas públicas de Autenticação Multi-empresa */}

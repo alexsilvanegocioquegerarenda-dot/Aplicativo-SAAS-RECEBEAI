@@ -116,6 +116,7 @@ Antes da comercialização, teste os fluxos automático e manual, além de cria�
 
 - Termos de Uso: página pública em `/termos`, acessível pelo rodapé da landing page.
 - Política de Privacidade/LGPD: página pública em `/privacidade`, acessível pelo rodapé.
+- Política de Cancelamento e Reembolso: página pública em `/cancelamento-e-reembolso` (e `/reembolso`), acessível pelo rodapé do app e da landing page.
 - Suporte: página pública em `/suporte`; contato informado: `financeiro.saasrecebeai@gmail.com`.
 - Backup e restauração: [`docs/backup-e-restauracao.md`](docs/backup-e-restauracao.md), procedimento interno.
 

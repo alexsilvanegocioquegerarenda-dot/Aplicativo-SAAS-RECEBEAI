@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 // Configuração dos planos do SaaS RecebeAí: Essencial, Profissional e Enterprise ficam disponíveis
@@ -201,6 +202,15 @@ export default function Planos() {
         <p>
           Cancelamento simples a qualquer momento. Em caso de cancelamento da assinatura, o acesso pago será encerrado imediatamente.
         </p>
+        <div className="pt-2 flex flex-wrap items-center justify-center gap-4 text-xs font-medium text-slate-500">
+          <Link to="/termos" className="hover:text-blue-600 transition-colors">Termos de Uso</Link>
+          <span className="text-slate-300">•</span>
+          <Link to="/privacidade" className="hover:text-blue-600 transition-colors">Privacidade e LGPD</Link>
+          <span className="text-slate-300">•</span>
+          <Link to="/cancelamento-e-reembolso" className="hover:text-blue-600 text-blue-700 font-semibold transition-colors">Cancelamento e Reembolso</Link>
+          <span className="text-slate-300">•</span>
+          <Link to="/suporte" className="hover:text-blue-600 transition-colors">Suporte</Link>
+        </div>
       </div>
     </div>
   );

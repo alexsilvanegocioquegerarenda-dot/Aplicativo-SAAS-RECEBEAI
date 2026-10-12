@@ -386,68 +386,87 @@ export default function Layout({ children }) {
         </header>
 
         {/* Page Body */}
-        <main className="flex-1 overflow-y-auto">
-          {dataReadError && (
-            <div role="alert" className="mx-auto my-4 max-w-xl rounded-xl border border-red-200 bg-white p-6 text-center shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">Não foi possível carregar os dados. Verifique sua conexão e tente novamente.</p>
-              <div className="mt-4 flex items-center justify-center gap-3">
+        <main className="flex-1 overflow-y-auto flex flex-col justify-between">
+          <div>
+            {dataReadError && (
+              <div role="alert" className="mx-auto my-4 max-w-xl rounded-xl border border-red-200 bg-white p-6 text-center shadow-sm">
+                <p className="text-sm font-semibold text-slate-900">Não foi possível carregar os dados. Verifique sua conexão e tente novamente.</p>
+                <div className="mt-4 flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dataReadErrorRef.current = false;
+                      clearDataReadError();
+                      setDataReadError(null);
+                      setSupabaseStatus(isSupabaseConfigured ? "configured" : "not_configured");
+                      testarConexaoSupabase().then((result) => {
+                        if (!dataReadErrorRef.current) setSupabaseStatus(result.status);
+                      });
+                      setReadRetryKey((key) => key + 1);
+                    }}
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Tentar novamente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dataReadErrorRef.current = false;
+                      clearDataReadError();
+                      setDataReadError(null);
+                      base44.resetDemoData();
+                      setReadRetryKey((key) => key + 1);
+                    }}
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 shadow-sm"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Ver dados de demonstração
+                  </button>
+                </div>
+                {dataReadError.kind === "permission" && (
+                  <p className="mt-3 text-xs text-amber-700">O Supabase recusou o acesso. Verifique a autenticação e as permissões desta empresa.</p>
+                )}
+              </div>
+            )}
+
+            {dataWriteError && (
+              <div role="alert" className="mx-auto my-4 max-w-xl border border-red-200 bg-white p-6 text-center shadow-sm">
+                <p className="text-sm font-semibold text-slate-900">
+                  {dataWriteError.source === "demo"
+                    ? "Não foi possível gravar os dados locais da demonstração."
+                    : "A operação não foi confirmada pelo Supabase. Nenhum dado foi simulado como salvo."}
+                </p>
+                <p className="mt-2 text-xs text-slate-600">{dataWriteError.message}</p>
                 <button
                   type="button"
-                  onClick={() => {
-                    dataReadErrorRef.current = false;
-                    clearDataReadError();
-                    setDataReadError(null);
-                    setSupabaseStatus(isSupabaseConfigured ? "configured" : "not_configured");
-                    testarConexaoSupabase().then((result) => {
-                      if (!dataReadErrorRef.current) setSupabaseStatus(result.status);
-                    });
-                    setReadRetryKey((key) => key + 1);
-                  }}
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  onClick={() => setDataWriteError(null)}
+                  className="mt-4 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Tentar novamente
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    dataReadErrorRef.current = false;
-                    clearDataReadError();
-                    setDataReadError(null);
-                    base44.resetDemoData();
-                    setReadRetryKey((key) => key + 1);
-                  }}
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 shadow-sm"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Ver dados de demonstração
+                  Fechar
                 </button>
               </div>
-              {dataReadError.kind === "permission" && (
-                <p className="mt-3 text-xs text-amber-700">O Supabase recusou o acesso. Verifique a autenticação e as permissões desta empresa.</p>
-              )}
-            </div>
-          )}
+            )}
 
-          {dataWriteError && (
-            <div role="alert" className="mx-auto my-4 max-w-xl border border-red-200 bg-white p-6 text-center shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">
-                {dataWriteError.source === "demo"
-                  ? "Não foi possível gravar os dados locais da demonstração."
-                  : "A operação não foi confirmada pelo Supabase. Nenhum dado foi simulado como salvo."}
-              </p>
-              <p className="mt-2 text-xs text-slate-600">{dataWriteError.message}</p>
-              <button
-                type="button"
-                onClick={() => setDataWriteError(null)}
-                className="mt-4 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Fechar
-              </button>
-            </div>
-          )}
+            <div key={readRetryKey} className="contents">{children}</div>
+          </div>
 
-          <div key={readRetryKey} className="contents">{children}</div>
+          {/* Rodapé da Aplicação com as Políticas */}
+          <footer className="mt-auto border-t border-slate-200/80 bg-white py-3.5 px-6 text-xs text-slate-500">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-7xl mx-auto">
+              <div className="flex items-center gap-2 text-slate-600">
+                <span className="font-semibold text-slate-800">RecebeAi</span>
+                <span>•</span>
+                <span>Tecnologia em Gestão e Cobrança de Recebíveis</span>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-slate-500 font-medium">
+                <Link to="/termos" className="hover:text-blue-600 transition-colors">Termos de Uso</Link>
+                <Link to="/privacidade" className="hover:text-blue-600 transition-colors">Privacidade e LGPD</Link>
+                <Link to="/cancelamento-e-reembolso" className="hover:text-blue-600 transition-colors">Cancelamento e Reembolso</Link>
+                <Link to="/suporte" className="hover:text-blue-600 transition-colors">Suporte</Link>
+              </div>
+            </div>
+          </footer>
         </main>
       </div>
     </div>

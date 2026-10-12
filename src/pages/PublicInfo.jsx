@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Mail, ShieldCheck, FileText, LifeBuoy } from "lucide-react";
+import { ArrowLeft, Mail, ShieldCheck, FileText, LifeBuoy, RotateCcw } from "lucide-react";
 
 const sectionClass = "space-y-3";
 const headingClass = "text-lg font-bold text-slate-900";
@@ -39,6 +39,13 @@ function PublicPage({ title, description, icon: Icon, children }) {
           </p>
         </article>
 
+        {/* Rodapé com links entre as políticas públicas */}
+        <footer className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-slate-200/60 pt-6 text-xs text-slate-500">
+          <Link to="/termos" className="hover:text-blue-700 font-medium transition-colors">Termos de Uso</Link>
+          <Link to="/privacidade" className="hover:text-blue-700 font-medium transition-colors">Política de Privacidade</Link>
+          <Link to="/cancelamento-e-reembolso" className="hover:text-blue-700 font-medium transition-colors">Cancelamento e Reembolso</Link>
+          <Link to="/suporte" className="hover:text-blue-700 font-medium transition-colors">Suporte</Link>
+        </footer>
       </div>
     </main>
   );
@@ -359,4 +366,170 @@ function Support() {
   );
 }
 
-export { PrivacyPolicy, Support, TermsOfUse };
+function CancellationRefundPolicy() {
+  return (
+    <PublicPage
+      title="Política de Cancelamento e Reembolso"
+      description="Direito de arrependimento, cancelamento de assinatura recorrente, prazos e procedimentos de estorno da plataforma RecebeAi."
+      icon={RotateCcw}
+    >
+      <Section title="1. Identificação do prestador e canal de atendimento">
+        <p className={paragraphClass}>
+          O RecebeAi é operado por {providerName}, inscrito no CPF sob o nº {providerCpf}, com endereço
+          informado em {providerAddress}. O canal de contato e atendimento exclusivo para solicitações
+          financeiras, cancelamentos e pedidos de reembolso é o e-mail{" "}
+          <a className="font-semibold text-blue-700 hover:underline" href={`mailto:${supportEmail}`}>
+            {supportEmail}
+          </a>.
+        </p>
+        <p className={paragraphClass}>
+          O atendimento é prestado em dias úteis, de segunda a sexta-feira, das 9h às 17h (horário de
+          Brasília), exceto feriados nacionais.
+        </p>
+      </Section>
+
+      <Section title="2. Modelo de assinatura e cobrança recorrente">
+        <p className={paragraphClass}>
+          O RecebeAi opera no modelo de Software como Serviço (SaaS). Os planos Essencial,
+          Profissional e Enterprise são disponibilizados mediante assinatura mensal recorrente com
+          renovação automática ao final de cada período faturado, processada por meio de intermediador
+          de pagamento autorizado (Mercado Pago).
+        </p>
+        <p className={paragraphClass}>
+          O cliente tem ciência de que a cobrança é mensal e contínua até que seja manifestada a
+          solicitação de cancelamento pelo titular da conta. Os preços e recursos de cada plano são
+          apresentados na página de contratação antes de qualquer pagamento.
+        </p>
+      </Section>
+
+      <Section title="3. Direito legal de arrependimento (7 dias corridos - Art. 49 do CDC)">
+        <p className={paragraphClass}>
+          Em conformidade com o artigo 49 do Código de Defesa do Consumidor (Lei nº 8.078/1990) e o
+          Decreto do Comércio Eletrônico (Decreto nº 7.962/2013), para contratações realizadas pela
+          internet, o cliente pode desistir da contratação inicial no prazo improrrogável de até 7 (sete)
+          dias corridos, contados a partir da confirmação do pagamento e disponibilização do acesso à
+          plataforma.
+        </p>
+        <p className={paragraphClass}>
+          Exercido o direito de arrependimento dentro desse prazo de 7 dias, o cliente terá direito ao
+          reembolso integral de 100% dos valores pagos na primeira mensalidade, sem incidência de multas,
+          taxas ou descontos administrativos.
+        </p>
+      </Section>
+
+      <Section title="4. Política comercial de reembolso para renovações mensais">
+        <p className={paragraphClass}>
+          Como garantia e benefício comercial adicional oferecido pelo RecebeAi, caso a assinatura seja
+          renovada automaticamente e o cliente não deseje continuar utilizando a plataforma, ele poderá
+          solicitar o cancelamento com reembolso integral daquela cobrança em até 7 (sete) dias corridos
+          a contar da data da cobrança de renovação.
+        </p>
+        <p className={paragraphClass}>
+          Solicitações efetuadas após o término do prazo de 7 dias da renovação serão processadas sem
+          qualquer multa rescisória, contudo não haverá reembolso proporcional do ciclo mensal já
+          iniciado.
+        </p>
+      </Section>
+
+      <Section title="5. Como solicitar o cancelamento e reembolso">
+        <p className={paragraphClass}>
+          Para cancelar a assinatura e requerer o reembolso quando elegível, o usuário pode utilizar:
+        </p>
+        <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-slate-600">
+          <li>
+            <strong>Área do Cliente na plataforma:</strong> Acessando o painel de configurações ou
+            gerenciamento de plano para interromper a renovação.
+          </li>
+          <li>
+            <strong>Canal oficial de e-mail:</strong> Enviando solicitação para{" "}
+            <a className="font-semibold text-blue-700 hover:underline" href={`mailto:${supportEmail}`}>
+              {supportEmail}
+            </a>{" "}
+            com o assunto “Solicitação de Cancelamento e Reembolso — RecebeAi”.
+          </li>
+        </ul>
+        <p className={paragraphClass}>
+          No e-mail, solicitamos informar: (a) Nome completo ou razão social da empresa; (b) E-mail
+          cadastrado na conta; e (c) Identificador ou comprovante do pagamento gerado pelo Mercado Pago.
+        </p>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-900">
+          <strong>Aviso de Segurança:</strong> Nunca envie dados completos de cartão de crédito,
+          código de segurança (CVV), senha ou segredos de autenticação por e-mail.
+        </div>
+      </Section>
+
+      <Section title="6. Prazos e procedimentos de estorno">
+        <p className={paragraphClass}>
+          O fluxo de confirmação e estorno segue os seguintes prazos operacionais:
+        </p>
+        <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-slate-600">
+          <li>
+            <strong>Confirmação de recebimento:</strong> O suporte confirmará o recebimento do pedido em
+            até 1 dia útil.
+          </li>
+          <li>
+            <strong>Comando de estorno:</strong> Estando elegível, o RecebeAi emitirá a ordem de estorno
+            junto ao Mercado Pago em até 5 dias úteis.
+          </li>
+          <li>
+            <strong>Efetivação via PIX:</strong> O valor estornado é creditado na mesma conta bancária
+            pagadora utilizada na transação, normalmente no mesmo dia ou em até 1 dia útil após a
+            ordem.
+          </li>
+          <li>
+            <strong>Efetivação via Cartão de Crédito:</strong> O cancelamento é transmitido à
+            administradora do cartão pelo intermediador de pagamento. A devolução do limite ou crédito na
+            fatura depende da emissora do cartão e da data de fechamento da fatura, constando geralmente
+            na fatura vigente ou na subsequente.
+          </li>
+        </ul>
+      </Section>
+
+      <Section title="7. Efeitos e regras do cancelamento">
+        <p className={paragraphClass}>
+          Não cobramos multas rescisórias, taxas de encerramento nem período de carência contratual.
+          Após a confirmação do cancelamento pelo Mercado Pago, novas cobranças são interrompidas e o
+          acesso pago é encerrado imediatamente.
+        </p>
+        <p className={paragraphClass}>
+          O cancelamento não perdoa nem elimina eventuais débitos anteriores e valores pendentes
+          gerados legitimamente antes do pedido de encerramento.
+        </p>
+      </Section>
+
+      <Section title="8. Cobranças duplicadas ou indevidas">
+        <p className={paragraphClass}>
+          Caso identifique qualquer inconsistência, cobrança duplicada ou débito não reconhecido,
+          solicitamos entrar em contato imediatamente pelo e-mail{" "}
+          <a className="font-semibold text-blue-700 hover:underline" href={`mailto:${supportEmail}`}>
+            {supportEmail}
+          </a>. O RecebeAi priorizará a análise do caso e, confirmada a cobrança indevida, efetuará o
+          estorno integral dos valores divergentes, preservando todos os direitos de contestação junto ao
+          meio de pagamento.
+        </p>
+      </Section>
+
+      <Section title="9. Exportação e retenção de dados após cancelamento (LGPD)">
+        <p className={paragraphClass}>
+          Conforme a nossa Política de Privacidade, em caso de encerramento da conta, o titular pode
+          solicitar a exportação dos seus dados durante 30 dias.
+        </p>
+        <p className={paragraphClass}>
+          Decorrido o período, os dados operacionais identificáveis da conta serão excluídos ou
+          anonimizados dos sistemas ativos em até 90 dias, mantendo-se unicamente os dados necessários
+          ao cumprimento de obrigações legais, contábeis ou fiscais.
+        </p>
+      </Section>
+
+      <Section title="10. Legislação aplicável e foro">
+        <p className={paragraphClass}>
+          Esta Política é regida pelas leis brasileiras. Qualquer controvérsia será dirimida pelo foro
+          competente conforme a legislação em vigor, resguardadas as disposições protetivas aplicáveis do
+          Código de Defesa do Consumidor.
+        </p>
+      </Section>
+    </PublicPage>
+  );
+}
+
+export { CancellationRefundPolicy, PrivacyPolicy, Support, TermsOfUse };

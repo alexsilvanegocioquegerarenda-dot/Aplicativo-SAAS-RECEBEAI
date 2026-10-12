@@ -401,8 +401,14 @@ export default function Cadastro() {
       </div>
 
       {/* Footer */}
-      <div className="max-w-5xl mx-auto w-full text-center pt-6 text-xs text-slate-500 border-t border-slate-800/80">
-        © {new Date().getFullYear()} RecebeAi Soluções Tecnológicas. Todos os direitos reservados.
+      <div className="max-w-5xl mx-auto w-full text-center pt-6 text-xs text-slate-500 border-t border-slate-800/80 space-y-2">
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-slate-400">
+          <Link to="/termos" className="hover:text-slate-200 transition-colors">Termos de Uso</Link>
+          <Link to="/privacidade" className="hover:text-slate-200 transition-colors">Privacidade e LGPD</Link>
+          <Link to="/cancelamento-e-reembolso" className="hover:text-slate-200 transition-colors">Cancelamento e Reembolso</Link>
+          <Link to="/suporte" className="hover:text-slate-200 transition-colors">Suporte</Link>
+        </div>
+        <div>© {new Date().getFullYear()} RecebeAi Soluções Tecnológicas. Todos os direitos reservados.</div>
       </div>
     </div>
   );

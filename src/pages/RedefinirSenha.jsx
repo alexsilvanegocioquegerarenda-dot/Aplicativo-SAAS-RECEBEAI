@@ -264,8 +264,14 @@ export default function RedefinirSenha() {
         </div>
       </div>
 
-      <div className="text-center text-[11px] text-slate-500 py-3">
-        © {new Date().getFullYear()} RecebeAi. Todos os direitos reservados.
+      <div className="text-center text-[11px] text-slate-500 py-3 space-y-1.5">
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-slate-400">
+          <Link to="/termos" className="hover:text-slate-200 transition-colors">Termos de Uso</Link>
+          <Link to="/privacidade" className="hover:text-slate-200 transition-colors">Privacidade e LGPD</Link>
+          <Link to="/cancelamento-e-reembolso" className="hover:text-slate-200 transition-colors">Cancelamento e Reembolso</Link>
+          <Link to="/suporte" className="hover:text-slate-200 transition-colors">Suporte</Link>
+        </div>
+        <div>© {new Date().getFullYear()} RecebeAi. Todos os direitos reservados.</div>
       </div>
     </div>
   );

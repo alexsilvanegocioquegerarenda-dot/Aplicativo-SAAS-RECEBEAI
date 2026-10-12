@@ -130,7 +130,11 @@ assert.match(signupPage, /\["essencial", "profissional", "enterprise"\]\.include
 assert.doesNotMatch(landingPage, /devem ser confirmadas antes da compra/);
 assert.match(landingPage, /to="\/termos"/);
 assert.match(landingPage, /to="\/privacidade"/);
+assert.match(landingPage, /to="\/cancelamento-e-reembolso"/);
 assert.match(landingPage, /to="\/suporte"/);
+assert.match(appFile, /path="\/cancelamento-e-reembolso"/);
+assert.match(publicInfoPage, /CancellationRefundPolicy/);
+assert.match(publicInfoPage, /Política de Cancelamento e Reembolso/);
 assert.match(backupRunbook, /não incluem os objetos armazenados pelo Supabase Storage/i);
 assert.match(backupRunbook, /exportação durante os 30 dias/i);
 assert.match(backupRunbook, /em até 90 dias/i);
