@@ -52,6 +52,7 @@ const PLANOS = [
 export default function Planos() {
   const { user } = useAuth();
   const [loadingPlanoId, setLoadingPlanoId] = useState(null);
+  const [checkingBilling, setCheckingBilling] = useState(false);
 
   // Validação exata exigida pela suíte de testes de QA
   const billingStatus = user?.billingStatus || user?.subscription_status || "inactive";
@@ -168,7 +169,7 @@ export default function Planos() {
               <div className="mt-8">
                 <button
                   onClick={() => handleContratarPlano(plano)}
-                  disabled={isLoading || isSubscriptionBlockingCheckout}
+                  disabled={isLoading || checkingBilling || isSubscriptionBlockingCheckout}
                   className={`w-full py-3 px-6 rounded-lg font-bold text-sm transition-colors flex items-center justify-center space-x-2 ${
                     plano.destaque
                       ? "bg-emerald-600 hover:bg-emerald-700 text-white"
