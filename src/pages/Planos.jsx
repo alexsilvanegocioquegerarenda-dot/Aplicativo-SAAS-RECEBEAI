@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
-// Configuração dos planos do SaaS RecebeAí
 const PLANOS = [
   {
     id: "essencial",
@@ -54,11 +53,9 @@ export default function Planos() {
   const [loadingPlanoId, setLoadingPlanoId] = useState(null);
   const [checkingBilling, setCheckingBilling] = useState(false);
 
-  // Variáveis exigidas pela suíte de testes de QA
   const billingStatus = user?.billingStatus || user?.subscription_status || "inactive";
   const isSubscriptionBlockingCheckout = ["active", "past_due"].includes(billingStatus);
 
-  // Envia os dados do plano escolhido para a Serverless Function na Vercel
   const handleContratarPlano = async (plano) => {
     if (isSubscriptionBlockingCheckout) {
       alert("Você já possui uma assinatura ativa ou pendente.");
@@ -166,7 +163,15 @@ export default function Planos() {
               </div>
 
               <div className="mt-8">
-                <button onClick={() => handleContratarPlano(plano)} disabled={isLoading || checkingBilling || isSubscriptionBlockingCheckout} className={`w-full py-3 px-6 rounded-lg font-bold text-sm transition-colors flex items-center justify-center space-x-2 ${plano.destaque ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-slate-900 hover:bg-slate-800 text-white"} disabled:opacity-50`}>
+                <button
+                  onClick={() => handleContratarPlano(plano)}
+                  disabled={isLoading || checkingBilling || isSubscriptionBlockingCheckout}
+                  className={`w-full py-3 px-6 rounded-lg font-bold text-sm transition-colors flex items-center justify-center space-x-2 ${
+                    plano.destaque
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                      : "bg-slate-900 hover:bg-slate-800 text-white"
+                  } disabled:opacity-50`}
+                >
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -184,7 +189,6 @@ export default function Planos() {
         })}
       </div>
 
-      {/* Rodapé legal validado pela suíte de testes de QA */}
       <div className="max-w-3xl mx-auto mt-12 text-center text-xs text-slate-500 space-y-2">
         <p>
           Consulte nossas regras de cancelamento e reembolso antes de pagar.
